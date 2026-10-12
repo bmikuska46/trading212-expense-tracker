@@ -1,0 +1,81 @@
+{
+  "kinds": {
+    "categories": {
+      "column": "Category",
+      "new": "New category",
+      "choose": "Choose a category",
+      "matches": "{input} matches the existing category {name}.",
+      "move": "{count, plural, one {# transaction moves} other {# transactions move}} to the chosen category."
+    },
+    "payees": {
+      "column": "Payee",
+      "new": "New payee",
+      "choose": "Choose a payee",
+      "matches": "{input} matches the existing payee {name}.",
+      "move": "{count, plural, one {# transaction moves} other {# transactions move}} to the chosen payee."
+    }
+  },
+  "added": "Added {name}.",
+  "adding": "Adding",
+  "add": "Add",
+  "nameRequired": "Enter a name.",
+  "findPayee": "Find a payee",
+  "mergeInto": "Merge into",
+  "dialog": {
+    "title": "Change {name}",
+    "description": "Old names stay as aliases, so future entries and imports with those names still match."
+  },
+  "alsoMatches": "Also matches: {aliases}",
+  "name": "Name",
+  "renameHint": "Changing only the capitalization or spacing keeps the same identity.",
+  "renaming": "Renaming",
+  "rename": "Rename",
+  "keepRule": "If both have a rule, the target's rule is kept.",
+  "merging": "Merging",
+  "merge": "Merge",
+  "columns": {
+    "renameOrMerge": ", rename or merge",
+    "fallback": "Fallback",
+    "also": "Also {aliases}",
+    "rule": "Rule",
+    "none": "None",
+    "rows": "Rows",
+    "transactions": "{count, plural, one {transaction} other {transactions}}"
+  },
+  "rules": {
+    "categoryFor": "Category for {payee}",
+    "on": "On",
+    "off": "Off",
+    "delete": "Delete",
+    "deleteFor": " rule for {payee}",
+    "saved": "Rule saved. It applies to new transactions.",
+    "title": "Payee rules",
+    "payee": "Payee",
+    "payeeRequired": "Enter a payee.",
+    "category": "Category",
+    "categoryRequired": "Enter a category.",
+    "save": "Save rule",
+    "loading": "Loading rules",
+    "empty": "No rules yet. After you correct a category, you can create one from the register.",
+    "caption": "Missing payees and categories are created when a rule names them.",
+    "active": "Active",
+    "footer": "A rule files new transactions from a payee under a category, for manual entries and imports. It never changes existing transactions, and it creates the payee or category if they are missing."
+  },
+  "categories": {
+    "loading": "Loading categories",
+    "title": "Categories",
+    "caption": "Counts include split parts. Uncategorized is the fallback and cannot be removed.",
+    "footer": "Counts include split parts. Names that differ only in capitalization, spacing or underscores are the same category."
+  },
+  "payees": {
+    "title": "Payees",
+    "search": "Search payees",
+    "loading": "Loading payees",
+    "noMatch": "No payees match.",
+    "none": "No payees yet.",
+    "caption": "{count, plural, one {# payee} other {# payees}}. Set rules on the Categories page.",
+    "range": "{first}-{last} of {total}",
+    "rulesHint": "Rules are set on the <link>Categories</link> page.",
+    "pages": "Pages"
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "badges": {
+    "notConnected": "Nepripojené",
+    "on": "Pripojené, zapnuté",
+    "off": "Pripojené, vypnuté",
+    "partial": "Chýbajú oprávnenia",
+    "failed": "Posledné overenie zlyhalo",
+    "unchecked": "Neoverené"
+  },
+  "itemStates": {
+    "ok": "Dostupné",
+    "missing": "Chýba",
+    "unverified": "Nedá sa overiť"
+  },
+  "checked": "Overené {date}",
+  "savedHint": "Uložené ({hint}). Prázdne pole ponechá pôvodnú hodnotu.",
+  "saved": "Uložené. Prázdne pole ponechá pôvodnú hodnotu.",
+  "storedEncrypted": "Uchováva sa zašifrovane na tomto serveri a už sa nikdy nezobrazí.",
+  "checkingAndSaving": "Overujem a ukladám",
+  "checkAndSave": "Overiť a uložiť",
+  "checking": "Overujem",
+  "checkAgain": "Overiť znova",
+  "removing": "Odstraňujem",
+  "remove": "Odstrániť prístupové údaje",
+  "loading": "Načítavam integrácie",
+  "apiKey": "API kľúč",
+  "enterApiKey": "Zadajte API kľúč.",
+  "apiSecret": "Tajný API kľúč",
+  "enterApiSecret": "Zadajte tajný API kľúč.",
+  "trading212": {
+    "description": "Importuje platby kartou z mesačných výpisov histórie, každú hodinu zaznamenáva vaše portfólio na stránke Investície a importuje dividendy, úroky a cashback. V Trading 212 vytvorte API kľúč s oprávneniami na čítanie Account data, History a Pies. Načítajú sa len časti, ktoré vyberiete nižšie.",
+    "period": "Automatické importy začínajú obdobím {period}.",
+    "environment": "Prostredie",
+    "live": "Reálny účet",
+    "demo": "Cvičný účet",
+    "accountName": "Názov účtu",
+    "accountNameHint": "Účet, do ktorého sa budú importovať pohyby.",
+    "enabled": "Transakcie kartou",
+    "enabledHint": "Importujú sa každý mesiac, počnúc aktuálnym mesiacom. Staršie mesiace sa automaticky nikdy nevyžiadajú.",
+    "sync": "Čo synchronizovať",
+    "syncParts": {
+      "portfolio": "Prehľad účtu",
+      "portfolioHint": "Hodinový záznam hodnoty portfólia, hotovosti a výsledkov.",
+      "pies": "Pies",
+      "piesHint": "Hodnota, výsledok a dividendy každého pie. Vyžaduje prehľad účtu.",
+      "dividends": "Dividendy",
+      "dividendsHint": "Výplaty dividend z histórie dividend.",
+      "interest": "Úroky",
+      "interestHint": "Úroky z voľnej hotovosti a z požičiavania akcií.",
+      "cashback": "Cashback",
+      "cashbackHint": "Cashback z platieb kartou, načítaný z denného výpisu."
+    }
+  },
+  "typesafe": {
+    "description": "Jev navrhuje priradenie stĺpcov pre súbory CSV v novom formáte a kategórie pre nových príjemcov. Každý návrh skontrolujete vy.",
+    "enabled": "Navrhovať priradenie stĺpcov",
+    "enabledHint": "Názvy stĺpcov a prvé 3 riadky nového formátu sa do TypeSafe odošlú, iba ak je táto možnosť zapnutá.",
+    "categorize": "Navrhovať kategórie pre nových príjemcov",
+    "categorizeHint": "Po dokončení importu sa do TypeSafe odošlú názvy príjemcov bez pravidla alebo kategórie, informácia, či peniaze odišli alebo prišli, a ich poznámky. Sumy, dátumy ani účty sa neodosielajú. Potvrdené návrhy sa stanú pravidlami pre príjemcov."
+  },
+  "resend": {
+    "description": "Pošle e-mail, keď treba import skontrolovať alebo keď zlyhá.",
+    "keyHint": "Stačí kľúč len na odosielanie. Kľúč s plným prístupom navyše umožní aplikácii overiť doménu odosielateľa.",
+    "sender": "Odosielateľ",
+    "enterSender": "Zadajte adresu odosielateľa.",
+    "senderHint": "Adresa na doméne overenej v Resend, napríklad {example}.",
+    "senderExample": "Rozpočet '<'budget@example.com'>'",
+    "recipient": "Príjemca e-mailov",
+    "enterRecipient": "Zadajte adresu príjemcu.",
+    "url": "Adresa aplikácie",
+    "enterUrl": "Zadajte adresu tejto aplikácie.",
+    "urlHint": "Odkazy v e-mailoch budú smerovať na túto adresu.",
+    "enabled": "Posielať e-maily o importoch",
+    "enabledHint": "Kedykoľvek to môžete vypnúť."
+  },
+  "shared": "Spravuje vlastník a zdieľajú ho všetci používatelia.",
+  "sharedRecipient": "Upozornenia sa posielajú na {email}."
+}

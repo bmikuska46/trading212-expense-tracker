@@ -1,0 +1,33 @@
+{
+  "states": {
+    "pending": "Waiting to start",
+    "requesting": "Requesting the report",
+    "polling": "Waiting for Trading 212",
+    "downloading": "Downloading",
+    "validating": "Checking rows",
+    "committing": "Importing",
+    "completed": "Imported",
+    "failed": "Failed",
+    "canceled": "Canceled"
+  },
+  "noReport": "Trading 212 did not produce the report.",
+  "finished": "Finished {date}.",
+  "retry": "Retry {count}.",
+  "retryAfter": "Retry {count} after: {error}.",
+  "nextStep": "Next step {date}.",
+  "rerunStarted": "Started importing {month} again. Transactions already in the ledger are skipped.",
+  "title": "Monthly Trading 212 imports",
+  "on": "on",
+  "off": "off",
+  "loading": "Loading monthly imports",
+  "enabled": "Importing every month from {month}. Next run <time>{date}</time> ({timezone}).",
+  "disabled": "Automatic imports are off. Turn them on for Trading 212 in <link>Settings</link>.",
+  "caption": "Earlier history is never requested. Importing a month again skips transactions that are already in the ledger.",
+  "month": "Month",
+  "state": "State",
+  "details": "Details",
+  "actions": "Actions",
+  "open": "Open the import",
+  "rerun": "Import again",
+  "footer": "On the 1st of each month at 06:00 the server asks Trading 212 for the previous month and imports it. New transactions wait for your review."
+}

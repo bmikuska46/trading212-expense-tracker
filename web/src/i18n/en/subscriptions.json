@@ -1,0 +1,46 @@
+{
+  "due": {
+    "today": "today",
+    "tomorrow": "tomorrow",
+    "in": "in {count, plural, one {# day} other {# days}}",
+    "late": "{count, plural, one {# day} other {# days}} late"
+  },
+  "was": "was {amount}",
+  "active": {
+    "title": "Active",
+    "none": "No subscription is being paid right now.",
+    "caption": "Subscriptions still being paid. Select a column heading to sort, or a payee to see its transactions.",
+    "payee": "Payee",
+    "category": "Category",
+    "account": "Account",
+    "nextDue": "Next payment",
+    "months": "Months",
+    "monthly": "Monthly",
+    "newPrice": "New price",
+    "since": "Since {date}, {amount} paid",
+    "footer": "A subscription is a payment to the same payee every month, give or take 4 days, with the same amount at least two months in a row."
+  },
+  "ended": {
+    "title": "Ended",
+    "caption": "Subscriptions that missed their last payment. Select a column heading to sort.",
+    "payee": "Payee",
+    "paid": "Paid",
+    "lastPaid": "Last payment",
+    "total": "Total",
+    "monthly": "Monthly",
+    "months": "{count, plural, one {# month} other {# months}}"
+  },
+  "loading": "Loading subscriptions",
+  "tryAgain": "Try again",
+  "empty": {
+    "title": "No subscriptions found",
+    "body": "A payment shows up here once the same payee is paid the same amount two months in a row, give or take 4 days."
+  },
+  "totals": "Subscription costs in EUR",
+  "monthly": "Every month",
+  "activeCount": "{count} active",
+  "yearly": "Every year",
+  "todayPrices": "at today's prices",
+  "endedLabel": "Ended",
+  "endedCount": "{count, plural, one {subscription} other {subscriptions}}"
+}

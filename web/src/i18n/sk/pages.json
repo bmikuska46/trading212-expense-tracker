@@ -1,0 +1,31 @@
+{
+  "descriptions": {
+    "transactions": "Vyhľadávajte, filtrujte a opravujte svoje záznamy. Prevody medzi vlastnými účtmi sa do súčtov nezapočítavajú.",
+    "accounts": "Každý účet začína na nule. Zostatky sčítavajú pohyby zaznamenané tu, takže ukazujú evidované pohyby, nie zostatok, ktorý hlási banka.",
+    "categories": "Triedte výdavky a určte, kam sa zaradia nové transakcie.",
+    "payees": "Udržiavajte názvy obchodníkov v poriadku, aby história aj pravidlá zostali pokope.",
+    "subscriptions": "Platby, ktoré sa opakujú každý mesiac v rovnakej výške.",
+    "investing": "Vaše portfólio a koláče v Trading 212, zaznamenávané každú hodinu.",
+    "chat": "Pýtajte sa na svoje financie. Odpovede pochádzajú z vašich záznamov, do TypeSafe odchádza len samotná otázka.",
+    "imports": "Nahrajte exporty vo formáte CSV. Každý riadok sa skontroluje skôr, než sa dostane do záznamov, a nič sa neimportuje dvakrát.",
+    "settings": "Spravujte časové pásmo, jazyk, pripojené služby, výmenné kurzy a stav pracovného priestoru."
+  },
+  "loading": {
+    "overview": "Načítavam prehľad",
+    "investing": "Načítavam portfólio",
+    "chat": "Načítavam konverzácie",
+    "imports": "Načítavam importy",
+    "transactions": "Načítavam transakcie"
+  },
+  "workspace": "Pracovný priestor",
+  "notFound": {
+    "code": "Chyba 404",
+    "title": "Stránka sa nenašla",
+    "description": "Táto stránka vo vašom pracovnom priestore neexistuje.",
+    "back": "Späť na prehľad"
+  },
+  "planned": {
+    "soon": "Už čoskoro",
+    "title": "Stále vo vývoji"
+  }
+}

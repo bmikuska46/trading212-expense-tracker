@@ -1,0 +1,13 @@
+{
+  "title": "Command menu",
+  "description": "Search transactions, jump to a page or run an action.",
+  "empty": "Nothing matches.",
+  "search": "Search",
+  "searchFor": "Search transactions for \"{term}\"",
+  "actions": "Actions",
+  "importCsv": "Import a CSV file",
+  "themeLight": "Use the light theme",
+  "themeDark": "Use the dark theme",
+  "themeSystem": "Match the system theme",
+  "goTo": "Go to"
+}

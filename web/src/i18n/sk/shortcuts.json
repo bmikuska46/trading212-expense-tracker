@@ -1,0 +1,28 @@
+{
+  "title": "Klávesové skratky",
+  "description": "Skratky nereagujú, kým píšete do poľa alebo je otvorené dialógové okno.",
+  "then": "potom",
+  "groups": {
+    "anywhere": "Kdekoľvek",
+    "overview": "Prehľad",
+    "transactions": "Transakcie"
+  },
+  "items": {
+    "showShortcuts": "Zobraziť klávesové skratky",
+    "commands": "Hľadať a spúšťať príkazy",
+    "record": "Zaznamenať transakciu",
+    "sidebar": "Zbaliť alebo rozbaliť bočný panel",
+    "refreshStatus": "Obnoviť stav pripojenia",
+    "previousMonth": "Predchádzajúci mesiac",
+    "nextMonth": "Nasledujúci mesiac",
+    "search": "Hľadať",
+    "nextRow": "Nasledujúci riadok",
+    "previousRow": "Predchádzajúci riadok",
+    "toggleRow": "Označiť aktuálny riadok alebo zrušiť jeho označenie",
+    "openRow": "Otvoriť aktuálny riadok",
+    "previousPage": "Predchádzajúca strana",
+    "nextPage": "Nasledujúca strana",
+    "clearSelection": "Zrušiť výber"
+  },
+  "goTo": "Prejsť na stránku {page}"
+}

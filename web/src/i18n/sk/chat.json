@@ -1,0 +1,43 @@
+{
+  "history": "História konverzácií",
+  "historyDescription": "Vaše predchádzajúce otázky, najnovšie hore.",
+  "historyButton": "História",
+  "newChat": "Nová konverzácia",
+  "notConnected": {
+    "title": "TypeSafe nie je pripojený",
+    "body": "Otázky spracúva TypeSafe. Ak sa chcete pýtať, pridajte API kľúč v <link>nastaveniach</link>. Odosiela sa iba vaša otázka, vaše záznamy zostávajú na tomto serveri."
+  },
+  "missing": {
+    "title": "Túto konverzáciu sa nepodarilo otvoriť",
+    "startNew": "Začnite novú konverzáciu"
+  },
+  "loading": "Načítavam konverzáciu",
+  "reading": "Spracúvam vašu otázku",
+  "notAnswered": "Na otázku sa nepodarilo odpovedať",
+  "question": "Vaša otázka",
+  "placeholder": "Opýtajte sa na výdavky, príjmy, účty alebo investície",
+  "placeholderOff": "Ak sa chcete pýtať, pripojte TypeSafe",
+  "ask": "Opýtať sa",
+  "hint": "Enter odošle otázku, Shift+Enter pridá nový riadok.",
+  "left": "{count, plural, one {Zostáva # znak.} few {Zostávajú # znaky.} many {Zostáva # znaku.} other {Zostáva # znakov.}}",
+  "welcome": {
+    "title": "Pýtajte sa na svoje financie",
+    "body": "Odpovede vychádzajú priamo z vašich záznamov. Otázku spresníte obdobím, príjemcom, kategóriou, účtom alebo sumou a môžete pokračovať doplňujúcimi otázkami, napríklad „a minulý mesiac?“."
+  },
+  "loadingChats": "Načítavam konverzácie",
+  "noChats": "Zatiaľ žiadne konverzácie. Vaše otázky sa budú ukladať sem.",
+  "actionsFor": "Akcie pre {title}",
+  "rename": "Premenovať",
+  "delete": "Odstrániť",
+  "renameDialog": {
+    "title": "Premenovať konverzáciu",
+    "description": "Názov sa zobrazuje v histórii konverzácií.",
+    "label": "Názov",
+    "save": "Uložiť"
+  },
+  "deleteDialog": {
+    "title": "Odstrániť túto konverzáciu?",
+    "description": "Konverzácia „{title}“ aj s odpoveďami sa natrvalo odstráni. Vaše záznamy sa nezmenia.",
+    "deleting": "Odstraňujem"
+  }
+}

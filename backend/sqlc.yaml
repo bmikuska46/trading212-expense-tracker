@@ -1,0 +1,13 @@
+version: "2"
+sql:
+  - engine: sqlite
+    queries: queries
+    schema: migrations
+    gen:
+      go:
+        package: dbgen
+        out: internal/database/dbgen
+        emit_empty_slices: true
+        rename:
+          investing_py: InvestingPie
+          investing_group_py: InvestingGroupPie

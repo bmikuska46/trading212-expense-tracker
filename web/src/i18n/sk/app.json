@@ -1,0 +1,34 @@
+{
+  "name": "Spend212",
+  "title": "{page} | Spend212",
+  "description": "Prehľad výdavkov pre Trading 212 a akúkoľvek banku.",
+  "pages": {
+    "overview": "Prehľad",
+    "transactions": "Transakcie",
+    "accounts": "Účty",
+    "categories": "Kategórie",
+    "payees": "Príjemcovia",
+    "subscriptions": "Predplatné",
+    "investing": "Investície",
+    "chat": "Opýtať sa",
+    "imports": "Importy",
+    "settings": "Nastavenia",
+    "login": "Prihlásenie",
+    "onboarding": "Nastavenie pracovného priestoru",
+    "changePassword": "Nové heslo"
+  },
+  "groups": {
+    "ledger": "Evidencia",
+    "organize": "Organizácia",
+    "investing": "Investície",
+    "assistant": "Asistent",
+    "data": "Dáta"
+  },
+  "theme": {
+    "label": "Motív",
+    "light": "Svetlý",
+    "dark": "Tmavý",
+    "system": "Podľa systému"
+  },
+  "language": "Jazyk"
+}

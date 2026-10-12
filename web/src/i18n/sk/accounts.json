@@ -1,0 +1,29 @@
+{
+  "columns": {
+    "name": "Účet",
+    "provider": "Zdroj",
+    "transactionCount": "Transakcie",
+    "balance": "Zostatok",
+    "balanceEurCents": "V EUR"
+  },
+  "manual": "Manuálny",
+  "add": {
+    "title": "Pridať účet",
+    "name": "Názov",
+    "placeholder": "Peňaženka",
+    "nameRequired": "Zadajte názov.",
+    "currency": "Mena",
+    "hint": "Pre hotovostné, bankové alebo kartové účty, ktoré zapisujete ručne. Účty Trading 212 sa tu zobrazia po pripojení v nastaveniach.",
+    "adding": "Pridávam",
+    "submit": "Pridať účet",
+    "added": "Účet {name} bol pridaný."
+  },
+  "caption": "Zostatky zachytávajú sledované pohyby od nuly od pridania každého účtu, nie zostatok vo vašej banke alebo u brokera.",
+  "total": "Spolu",
+  "title": "Vaše účty",
+  "loading": "Načítavam účty",
+  "empty": {
+    "title": "Zatiaľ žiadne účty",
+    "body": "Pridajte účet ručne alebo pripojte Trading 212 v nastaveniach."
+  }
+}

@@ -1,0 +1,6 @@
+Dátum spracovania,Dátum zúčtovania,Suma,Mena,Typ,Predčíslie,Číslo účtu,Kód banky,IBAN,Variabilný symbol,Špecifický symbol,Konštantný symbol,Referencia platiteľa,Informácia pre príjemcu,Popis
+01.09.2026,01.09.2026,"0,45",EUR,Debet,,,,,,,,,Example Café,GP NÁKUP POS
+01.09.2026,01.09.2026,"0,45",EUR,Debet,,,,,,,,,Example Café,GP NÁKUP POS
+01.09.2026,01.09.2026,"2,20",EUR,Debet,,123456,1100,SK0000000000000000123456, 92026, 92026, 38,/VS092026/SS092026/KS0038,,TPP 1100/000000-0000123456
+03.09.2026,03.09.2026,"7,20",EUR,Debet,,,,,,,,,"Example Shop, s.r.o.",GP NÁKUP POS
+03.09.2026,03.09.2026,"93,24",EUR,Kredit,,123456,1100,SK0000000000000000123456, 92026, 92026, 38,/VS092026/SS092026/KS0038,Example income,PLATBA 1100/000000-0000123456

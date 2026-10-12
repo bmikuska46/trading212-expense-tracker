@@ -1,0 +1,29 @@
+{
+  "columns": {
+    "name": "Account",
+    "provider": "Source",
+    "transactionCount": "Rows",
+    "balance": "Tracked",
+    "balanceEurCents": "In EUR"
+  },
+  "manual": "Manual",
+  "add": {
+    "title": "Add an account",
+    "name": "Name",
+    "placeholder": "Cash wallet",
+    "nameRequired": "Enter a name.",
+    "currency": "Currency",
+    "hint": "For cash, bank or card accounts you record by hand. Trading 212 accounts appear once connected in Settings.",
+    "adding": "Adding",
+    "submit": "Add account",
+    "added": "Added {name}."
+  },
+  "caption": "Balances show tracked activity from zero since each account was added, not the balance at your bank or broker.",
+  "total": "Total",
+  "title": "Your accounts",
+  "loading": "Loading accounts",
+  "empty": {
+    "title": "No accounts yet",
+    "body": "Add one by hand, or connect Trading 212 in Settings."
+  }
+}

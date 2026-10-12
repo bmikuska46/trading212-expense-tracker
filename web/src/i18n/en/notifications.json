@@ -1,0 +1,29 @@
+{
+  "label": "Notifications",
+  "confirmed": "Confirmed the import of {count, plural, one {# transaction} other {# transactions}}.",
+  "needsReviewTitle": "This import needs review",
+  "needsReviewBody": "Check the {count, plural, one {# new transaction} other {# new transactions}} from <file>{filename}</file> and correct anything that is wrong. Confirming changes no values.",
+  "confirming": "Confirming",
+  "confirmImport": "Confirm import",
+  "delivery": {
+    "delivered": "Email sent.",
+    "failed": "The email could not be sent. {error}",
+    "uncertain": "The email may or may not have been sent.",
+    "sending": "Sending the email.",
+    "retry": "The email will be retried. {error}",
+    "waiting": "The email is waiting to be sent."
+  },
+  "dismissed": "Dismissed the alert.",
+  "resent": "The email will be sent again.",
+  "status": {
+    "review": "Needs review",
+    "failure": "Import failed"
+  },
+  "waiting": "{count, plural, one {# new transaction waits} other {# new transactions wait}} for review.",
+  "openImports": "Open imports",
+  "review": "Review",
+  "sending": "Sending",
+  "sendAgain": "Send again",
+  "dismissing": "Dismissing",
+  "dismiss": "Dismiss"
+}

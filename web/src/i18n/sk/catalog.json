@@ -1,0 +1,81 @@
+{
+  "kinds": {
+    "categories": {
+      "column": "Kategória",
+      "new": "Nová kategória",
+      "choose": "Vyberte kategóriu",
+      "matches": "{input} zodpovedá existujúcej kategórii {name}.",
+      "move": "{count, plural, one {# transakcia sa presunie} few {# transakcie sa presunú} many {# transakcie sa presunie} other {# transakcií sa presunie}} do vybranej kategórie."
+    },
+    "payees": {
+      "column": "Príjemca",
+      "new": "Nový príjemca",
+      "choose": "Vyberte príjemcu",
+      "matches": "{input} zodpovedá existujúcemu príjemcovi {name}.",
+      "move": "{count, plural, one {# transakcia sa presunie} few {# transakcie sa presunú} many {# transakcie sa presunie} other {# transakcií sa presunie}} k vybranému príjemcovi."
+    }
+  },
+  "added": "Pridané: {name}.",
+  "adding": "Pridávam",
+  "add": "Pridať",
+  "nameRequired": "Zadajte názov.",
+  "findPayee": "Nájsť príjemcu",
+  "mergeInto": "Zlúčiť do",
+  "dialog": {
+    "title": "Upraviť {name}",
+    "description": "Pôvodné názvy zostanú ako aliasy, takže budúce záznamy a importy s týmito názvami sa naďalej priradia."
+  },
+  "alsoMatches": "Zodpovedá aj: {aliases}",
+  "name": "Názov",
+  "renameHint": "Zmena iba veľkých a malých písmen alebo medzier zachová rovnakú položku.",
+  "renaming": "Premenúvam",
+  "rename": "Premenovať",
+  "keepRule": "Ak majú pravidlo obaja, ponechá sa pravidlo cieľového príjemcu.",
+  "merging": "Zlučujem",
+  "merge": "Zlúčiť",
+  "columns": {
+    "renameOrMerge": ", premenovať alebo zlúčiť",
+    "fallback": "Predvolená",
+    "also": "Aj {aliases}",
+    "rule": "Pravidlo",
+    "none": "Žiadne",
+    "rows": "Transakcie",
+    "transactions": "{count, plural, one {transakcia} few {transakcie} many {transakcie} other {transakcií}}"
+  },
+  "rules": {
+    "categoryFor": "Kategória pre {payee}",
+    "on": "Zapnuté",
+    "off": "Vypnuté",
+    "delete": "Odstrániť",
+    "deleteFor": " pravidlo pre {payee}",
+    "saved": "Pravidlo je uložené. Platí pre nové transakcie.",
+    "title": "Pravidlá príjemcov",
+    "payee": "Príjemca",
+    "payeeRequired": "Zadajte príjemcu.",
+    "category": "Kategória",
+    "categoryRequired": "Zadajte kategóriu.",
+    "save": "Uložiť pravidlo",
+    "loading": "Načítavam pravidlá",
+    "empty": "Zatiaľ žiadne pravidlá. Keď v registri opravíte kategóriu, môžete z nej hneď vytvoriť pravidlo.",
+    "caption": "Chýbajúci príjemcovia a kategórie sa vytvoria, keď ich pravidlo uvádza.",
+    "active": "Aktívne",
+    "footer": "Pravidlo zaradí nové transakcie od príjemcu do kategórie, pri ručných záznamoch aj importoch. Existujúce transakcie nikdy nemení a chýbajúceho príjemcu alebo kategóriu vytvorí."
+  },
+  "categories": {
+    "loading": "Načítavam kategórie",
+    "title": "Kategórie",
+    "caption": "Počty zahŕňajú aj časti rozdelených transakcií. Kategória Uncategorized je predvolená a nedá sa odstrániť.",
+    "footer": "Počty zahŕňajú aj časti rozdelených transakcií. Názvy, ktoré sa líšia iba veľkými a malými písmenami, medzerami alebo podčiarkovníkmi, sú tá istá kategória."
+  },
+  "payees": {
+    "title": "Príjemcovia",
+    "search": "Hľadať príjemcov",
+    "loading": "Načítavam príjemcov",
+    "noMatch": "Hľadaniu nezodpovedá žiadny príjemca.",
+    "none": "Zatiaľ žiadni príjemcovia.",
+    "caption": "{count, plural, one {# príjemca} few {# príjemcovia} other {# príjemcov}}. Pravidlá nastavíte na stránke Kategórie.",
+    "range": "{first}-{last} z {total}",
+    "rulesHint": "Pravidlá sa nastavujú na stránke <link>Kategórie</link>.",
+    "pages": "Strany"
+  }
+}

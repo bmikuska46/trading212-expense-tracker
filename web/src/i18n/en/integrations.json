@@ -1,0 +1,78 @@
+{
+  "badges": {
+    "notConnected": "Not connected",
+    "on": "Connected, on",
+    "off": "Connected, off",
+    "partial": "Missing permissions",
+    "failed": "Last check failed",
+    "unchecked": "Not checked"
+  },
+  "itemStates": {
+    "ok": "Available",
+    "missing": "Missing",
+    "unverified": "Could not verify"
+  },
+  "checked": "Checked {date}",
+  "savedHint": "Saved ({hint}). Leave blank to keep it.",
+  "saved": "Saved. Leave blank to keep it.",
+  "storedEncrypted": "Stored encrypted on this server and never shown again.",
+  "checkingAndSaving": "Checking and saving",
+  "checkAndSave": "Check and save",
+  "checking": "Checking",
+  "checkAgain": "Check again",
+  "removing": "Removing",
+  "remove": "Remove credentials",
+  "loading": "Loading integrations",
+  "apiKey": "API key",
+  "enterApiKey": "Enter the API key.",
+  "apiSecret": "API secret",
+  "enterApiSecret": "Enter the API secret.",
+  "trading212": {
+    "description": "Imports card spending from monthly history reports, tracks your portfolio on the Investing page every hour, and imports dividends, interest and cashback. Create an API key in Trading 212 with the Account data, History and Pies read permissions. Only the parts you choose below are read.",
+    "period": "Automatic imports cover {period} onward.",
+    "environment": "Environment",
+    "live": "Live account",
+    "demo": "Practice account",
+    "accountName": "Account name",
+    "accountNameHint": "Name of the account that receives imported activity.",
+    "enabled": "Card transactions",
+    "enabledHint": "Imported every month, starting with the current month. Earlier months are never requested automatically.",
+    "sync": "What to sync",
+    "syncParts": {
+      "portfolio": "Account summary",
+      "portfolioHint": "Hourly snapshot of the portfolio value, cash and results.",
+      "pies": "Pies",
+      "piesHint": "Value, result and dividends of each pie. Needs the account summary.",
+      "dividends": "Dividends",
+      "dividendsHint": "Dividend payments from the dividend history.",
+      "interest": "Interest",
+      "interestHint": "Interest on free cash and from share lending.",
+      "cashback": "Cashback",
+      "cashbackHint": "Card spending cashback, read from a daily report."
+    }
+  },
+  "typesafe": {
+    "description": "Jev suggests column mappings for CSV files in a new format and categories for new payees. You review every suggestion.",
+    "enabled": "Suggest column mappings",
+    "enabledHint": "Column names and the first 3 rows of a new format are sent to TypeSafe only when this is on.",
+    "categorize": "Suggest categories for new payees",
+    "categorizeHint": "When an import commits, the names of payees without a rule or category, whether money went out or came in, and their notes are sent to TypeSafe. Amounts, dates, and accounts are not. Confirmed picks become payee rules."
+  },
+  "resend": {
+    "description": "Sends an email when an import needs review or fails.",
+    "keyHint": "A sending-only key works. A full access key also lets this app confirm the sender domain.",
+    "sender": "Sender",
+    "enterSender": "Enter the sender address.",
+    "senderHint": "An address on a domain verified in Resend, such as {example}.",
+    "senderExample": "Budget '<'budget@example.com'>'",
+    "recipient": "Recipient",
+    "enterRecipient": "Enter the recipient address.",
+    "url": "App address",
+    "enterUrl": "Enter the address of this app.",
+    "urlHint": "Links in emails open this address.",
+    "enabled": "Send import emails",
+    "enabledHint": "You can turn this off at any time."
+  },
+  "shared": "Managed by the owner and shared by all users.",
+  "sharedRecipient": "Notifications are sent to {email}."
+}

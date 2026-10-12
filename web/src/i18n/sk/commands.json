@@ -1,0 +1,13 @@
+{
+  "title": "Ponuka príkazov",
+  "description": "Hľadajte transakcie, prejdite na stránku alebo spustite akciu.",
+  "empty": "Nič sa nenašlo.",
+  "search": "Hľadať",
+  "searchFor": "Hľadať transakcie s výrazom „{term}“",
+  "actions": "Akcie",
+  "importCsv": "Importovať súbor CSV",
+  "themeLight": "Použiť svetlý motív",
+  "themeDark": "Použiť tmavý motív",
+  "themeSystem": "Motív podľa systému",
+  "goTo": "Prejsť na"
+}

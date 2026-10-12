@@ -1,0 +1,195 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-income: var(--income);
+  --color-spending: var(--spending);
+  --color-income-text: var(--income-text);
+  --color-faint: var(--faint);
+  --color-mark: var(--mark);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+  --color-series-4: var(--series-4);
+  --color-series-5: var(--series-5);
+  --color-series-6: var(--series-6);
+  --color-series-7: var(--series-7);
+  --color-series-8: var(--series-8);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Paper palette: warm off-white surfaces with the same lime brand. Lime is
+     too pale for lines and glyphs on light surfaces, so it only fills areas
+     under dark text, and olive carries marks and focus rings. <html> carries
+     the dark class when the dark palette applies; see lib/theme.ts. */
+  color-scheme: light;
+  --background: #f7f6f1;
+  --foreground: #1b1e19;
+  --card: #ffffff;
+  --card-foreground: #1b1e19;
+  --popover: #ffffff;
+  --popover-foreground: #1b1e19;
+  --primary: #c6f432;
+  --primary-foreground: #1b1e19;
+  --secondary: #efeee7;
+  --secondary-foreground: #1b1e19;
+  --muted: #efeee7;
+  --muted-foreground: #5c6157;
+  /* faint text still meets 4.5:1 on panels. */
+  --faint: #6b7066;
+  --accent: #ecebe3;
+  --accent-foreground: #1b1e19;
+  --destructive: #c93636;
+  --border: #e4e2d9;
+  --input: #d5d3c8;
+  --ring: #4f7d00;
+  --mark: #4f7d00;
+  --chart-1: #2f6fd6;
+  --chart-2: #d2551f;
+  --chart-3: #5c6157;
+  --chart-4: #d5d3c8;
+  --chart-5: #e4e2d9;
+  --income: #2f6fd6;
+  --income-text: #2257b8;
+  --spending: #d2551f;
+  /* Investing lines, darkened to hold 3:1 against white panels. */
+  --series-1: #2f6fd6;
+  --series-2: #d2551f;
+  --series-3: #12855e;
+  --series-4: #b07400;
+  --series-5: #c2416f;
+  --series-6: #2a8a2a;
+  --series-7: #6f62d9;
+  --series-8: #d64545;
+  --radius: 0.5rem;
+  --header-height: 3.25rem;
+  --status-height: 1.875rem;
+  --sidebar: #f1f0ea;
+  --sidebar-foreground: #5c6157;
+  --sidebar-primary: #c6f432;
+  --sidebar-primary-foreground: #1b1e19;
+  --sidebar-accent: #e8e7df;
+  --sidebar-accent-foreground: #1b1e19;
+  --sidebar-border: #e4e2d9;
+  --sidebar-ring: #4f7d00;
+}
+
+.dark {
+  /* Console palette: a dark, dense workspace with a lime accent. */
+  color-scheme: dark;
+  --background: #0b0d0f;
+  --foreground: #e6e9ec;
+  --card: #111519;
+  --card-foreground: #e6e9ec;
+  --popover: #161b20;
+  --popover-foreground: #e6e9ec;
+  --primary: #c6f432;
+  --primary-foreground: #0b0d0f;
+  --secondary: #161b20;
+  --secondary-foreground: #e6e9ec;
+  --muted: #161b20;
+  --muted-foreground: #8a949e;
+  /* faint text still meets 4.5:1 on panels. */
+  --faint: #7c8690;
+  --accent: #1a2026;
+  --accent-foreground: #e6e9ec;
+  --destructive: #f06a6a;
+  --border: #1f262d;
+  --input: #2a333b;
+  --ring: #c6f432;
+  /* Marks are thin brand lines, icons and dots. Lime reads on dark. */
+  --mark: #c6f432;
+  --chart-1: #3a86ea;
+  --chart-2: #e8693a;
+  --chart-3: #8a949e;
+  --chart-4: #2a333b;
+  --chart-5: #1f262d;
+  /* Validated against the #12161a chart surface. */
+  --income: #3a86ea;
+  --income-text: #7fb5f5;
+  --spending: #e8693a;
+  /* Investing lines. Eight distinct hues for dark surfaces; further pies
+     share a dashed muted line. */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #2f9e2f;
+  --series-7: #9085e9;
+  --series-8: #e66767;
+  --sidebar: #0b0d0f;
+  --sidebar-foreground: #8a949e;
+  --sidebar-primary: #c6f432;
+  --sidebar-primary-foreground: #0b0d0f;
+  --sidebar-accent: #161b20;
+  --sidebar-accent-foreground: #e6e9ec;
+  --sidebar-border: #1f262d;
+  --sidebar-ring: #c6f432;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+@layer base {
+  :where(a, button):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /* Figures line up in columns. */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+}

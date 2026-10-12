@@ -1,0 +1,113 @@
+{
+  "loadingChart": "Loading chart",
+  "loading": "Loading the dashboard",
+  "kpis": {
+    "heading": "Totals for {month} in EUR",
+    "income": "Income",
+    "spending": "Spending",
+    "change": "<b>{change}</b> vs {month}",
+    "nothingVersus": "nothing vs {month}",
+    "nothing": "nothing",
+    "afterRefunds": ", after {amount} refunds",
+    "net": "Net cash flow",
+    "noIncome": "no income this month",
+    "kept": "<b>{percent}</b> of income kept",
+    "over": "<b>{percent}</b> more than income",
+    "balance": "Balance",
+    "balanceAll": "Balance, all accounts",
+    "thisMonth": "<b>{amount}</b> this month",
+    "transfers": "{count, plural, one {, # transfer not counted} other {, # transfers not counted}}"
+  },
+  "trend": {
+    "title": "Income vs spending",
+    "months": "{count} mo",
+    "chart": "Chart",
+    "table": "Table",
+    "hint": "Spending is after refunds. Select a month to open it."
+  },
+  "review": {
+    "title": "Review queue",
+    "counted": "counted in totals",
+    "emptyTitle": "Nothing awaits review",
+    "emptyBody": "New imports and flagged transactions appear here.",
+    "review": "Review",
+    "open": "Open",
+    "resolve": "Resolve",
+    "importTitle": "{count, plural, other {# new from {account}}}",
+    "importPeriod": ", {start} to {end}",
+    "moreImportsLabel": "imports awaiting review",
+    "moreImports": "{count, plural, one {# more import} other {# more imports}}",
+    "allImports": "{count, plural, one {# import awaits review in all} other {# imports await review in all}}",
+    "needsReviewLabel": "transactions that need review",
+    "needsReview": "{count, plural, one {# transaction needs review} other {# transactions need review}}",
+    "needsReviewBody": "flagged by rules or imports, every month",
+    "conflictLabel": "transactions changed at the source",
+    "conflicts": "{count, plural, other {# changed at the source}}",
+    "conflictBody": "the provider sent a different version"
+  },
+  "recent": {
+    "title": "Register",
+    "count": "{total} in {month}",
+    "seeAll": "See all",
+    "empty": "No transactions in {month}.",
+    "caption": "The latest transactions in {month}. Select a payee to open it.",
+    "list": "The latest transactions in {month}",
+    "shown": "{shown} of {total}",
+    "openRegister": "Open the register"
+  },
+  "spending": {
+    "title": "Spending by category",
+    "lastMonths": "{count, plural, one {Last month} other {Last # months}}",
+    "period": "Period",
+    "together": "Together",
+    "oneMonth": "One month",
+    "noneInLast": "{count, plural, one {No spending in the last month.} other {No spending in the last # months.}}",
+    "none": "No spending in {month}.",
+    "uncategorized": "Uncategorized",
+    "other": "Other categories"
+  },
+  "categories": {
+    "title": "Categories",
+    "manage": "Manage"
+  },
+  "accounts": {
+    "title": "Accounts",
+    "manage": "Manage",
+    "balances": "Balances at the end of {month}",
+    "archived": ", archived",
+    "thisMonth": "This month: ",
+    "total": "Total in EUR"
+  },
+  "month": {
+    "label": "Month",
+    "previous": "Previous month",
+    "next": "Next month",
+    "choose": "Month: {month}. Choose a month",
+    "current": "Go to this month"
+  },
+  "account": "Account",
+  "allAccounts": "All accounts",
+  "invalid": "Choose a different month or account.",
+  "showCurrent": "Show this month",
+  "empty": {
+    "title": "Add an account to start",
+    "body": "Record activity by hand or import a CSV file, and your monthly totals appear here.",
+    "addAccount": "Add an account",
+    "import": "Import a file"
+  },
+  "footnote": "Amounts are in EUR. Foreign transactions use the rate saved when they were imported. Transfers between your accounts stay out of the totals.",
+  "charts": {
+    "legend": "Legend",
+    "income": "Income",
+    "spending": "Spending",
+    "net": "Net",
+    "month": "Month",
+    "trendLabel": "Income and spending for twelve months. Use the arrow keys to read each month and Enter to open it.",
+    "trendLive": "{month}: income {income}, spending {spending}, net {net}.",
+    "tableCaption": "Income, spending after refunds and net cash flow by month in EUR",
+    "byCategory": "Spending by category",
+    "byCategoryIn": "Spending by category, {period}",
+    "showTransactions": ", show these transactions",
+    "spent": "Spent"
+  }
+}

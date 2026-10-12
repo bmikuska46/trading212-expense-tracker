@@ -1,0 +1,46 @@
+{
+  "due": {
+    "today": "dnes",
+    "tomorrow": "zajtra",
+    "in": "o {count, plural, one {# deň} few {# dni} many {# dňa} other {# dní}}",
+    "late": "{count, plural, one {# deň} few {# dni} many {# dňa} other {# dní}} po termíne"
+  },
+  "was": "predtým {amount}",
+  "active": {
+    "title": "Aktívne",
+    "none": "Momentálne neplatíte žiadne predplatné.",
+    "caption": "Predplatné, ktoré stále platíte. Stĺpce zoradíte kliknutím na ich nadpis, transakcie príjemcu zobrazíte kliknutím na jeho meno.",
+    "payee": "Príjemca",
+    "category": "Kategória",
+    "account": "Účet",
+    "nextDue": "Ďalšia platba",
+    "months": "Mesiace",
+    "monthly": "Mesačne",
+    "newPrice": "Nová cena",
+    "since": "Od {date}, zaplatené spolu {amount}",
+    "footer": "Predplatné je platba rovnakému príjemcovi každý mesiac, s odchýlkou do 4 dní, v rovnakej sume aspoň dva mesiace po sebe."
+  },
+  "ended": {
+    "title": "Ukončené",
+    "caption": "Predplatné, ktorých posledná platba neprišla. Stĺpce zoradíte kliknutím na ich nadpis.",
+    "payee": "Príjemca",
+    "paid": "Platené",
+    "lastPaid": "Posledná platba",
+    "total": "Spolu",
+    "monthly": "Mesačne",
+    "months": "{count, plural, one {# mesiac} few {# mesiace} other {# mesiacov}}"
+  },
+  "loading": "Načítavam predplatné",
+  "tryAgain": "Skúsiť znova",
+  "empty": {
+    "title": "Nenašli sa žiadne predplatné",
+    "body": "Platba sa tu zobrazí, keď rovnakému príjemcovi zaplatíte rovnakú sumu dva mesiace po sebe, s odchýlkou do 4 dní."
+  },
+  "totals": "Náklady na predplatné v EUR",
+  "monthly": "Mesačne",
+  "activeCount": "{count, plural, one {# aktívne} few {# aktívne} other {# aktívnych}}",
+  "yearly": "Ročne",
+  "todayPrices": "pri dnešných cenách",
+  "endedLabel": "Ukončené",
+  "endedCount": "{count, plural, one {predplatné} few {predplatné} other {predplatných}}"
+}

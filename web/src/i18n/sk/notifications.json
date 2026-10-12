@@ -1,0 +1,29 @@
+{
+  "label": "Upozornenia",
+  "confirmed": "Import {count, plural, one {# transakcie} few {# transakcií} other {# transakcií}} je potvrdený.",
+  "needsReviewTitle": "Tento import treba skontrolovať",
+  "needsReviewBody": "Skontrolujte {count, plural, one {# novú transakciu} few {# nové transakcie} other {# nových transakcií}} zo súboru <file>{filename}</file> a opravte, čo nesedí. Potvrdenie nezmení žiadne hodnoty.",
+  "confirming": "Potvrdzujem",
+  "confirmImport": "Potvrdiť import",
+  "delivery": {
+    "delivered": "E-mail bol odoslaný.",
+    "failed": "E-mail sa nepodarilo odoslať. {error}",
+    "uncertain": "Nie je isté, či bol e-mail odoslaný.",
+    "sending": "Odosielam e-mail.",
+    "retry": "Odoslanie e-mailu sa zopakuje. {error}",
+    "waiting": "E-mail čaká na odoslanie."
+  },
+  "dismissed": "Upozornenie je zavreté.",
+  "resent": "E-mail sa odošle znova.",
+  "status": {
+    "review": "Na kontrolu",
+    "failure": "Import zlyhal"
+  },
+  "waiting": "{count, plural, one {# nová transakcia čaká} few {# nové transakcie čakajú} other {# nových transakcií čaká}} na kontrolu.",
+  "openImports": "Otvoriť importy",
+  "review": "Skontrolovať",
+  "sending": "Odosielam",
+  "sendAgain": "Odoslať znova",
+  "dismissing": "Zatváram",
+  "dismiss": "Zavrieť"
+}

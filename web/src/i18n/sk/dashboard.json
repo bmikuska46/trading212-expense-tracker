@@ -1,0 +1,113 @@
+{
+  "loadingChart": "Načítavam graf",
+  "loading": "Načítavam prehľad",
+  "kpis": {
+    "heading": "Súčty za {month} v EUR",
+    "income": "Príjmy",
+    "spending": "Výdavky",
+    "change": "<b>{change}</b> medzimesačne",
+    "nothingVersus": "minulý mesiac nič",
+    "nothing": "bez porovnania",
+    "afterRefunds": ", po vrátení {amount}",
+    "net": "Čistý peňažný tok",
+    "noIncome": "tento mesiac bez príjmu",
+    "kept": "<b>{percent}</b> príjmu zostalo",
+    "over": "o <b>{percent}</b> viac než príjem",
+    "balance": "Zostatok",
+    "balanceAll": "Zostatok všetkých účtov",
+    "thisMonth": "<b>{amount}</b> tento mesiac",
+    "transfers": "{count, plural, one {, # prevod sa nezapočítava} few {, # prevody sa nezapočítavajú} other {, # prevodov sa nezapočítava}}"
+  },
+  "trend": {
+    "title": "Príjmy a výdavky",
+    "months": "{count} mes.",
+    "chart": "Graf",
+    "table": "Tabuľka",
+    "hint": "Výdavky sú po odpočítaní vrátených platieb. Mesiac otvoríte jeho výberom."
+  },
+  "review": {
+    "title": "Na kontrolu",
+    "counted": "zahrnuté v súčtoch",
+    "emptyTitle": "Nič nečaká na kontrolu",
+    "emptyBody": "Zobrazia sa tu nové importy a označené transakcie.",
+    "review": "Skontrolovať",
+    "open": "Otvoriť",
+    "resolve": "Vyriešiť",
+    "importTitle": "{count, plural, one {# nová transakcia z účtu {account}} few {# nové transakcie z účtu {account}} other {# nových transakcií z účtu {account}}}",
+    "importPeriod": ", {start} až {end}",
+    "moreImportsLabel": "importy čakajúce na kontrolu",
+    "moreImports": "{count, plural, one {Ďalší # import} few {Ďalšie # importy} other {Ďalších # importov}}",
+    "allImports": "{count, plural, one {Spolu # import čaká na kontrolu} few {Spolu # importy čakajú na kontrolu} other {Spolu # importov čaká na kontrolu}}",
+    "needsReviewLabel": "transakcie, ktoré treba skontrolovať",
+    "needsReview": "{count, plural, one {# transakciu treba skontrolovať} few {# transakcie treba skontrolovať} other {# transakcií treba skontrolovať}}",
+    "needsReviewBody": "označené pravidlami alebo importmi, za všetky mesiace",
+    "conflictLabel": "transakcie zmenené v zdroji",
+    "conflicts": "{count, plural, one {# transakcia sa zmenila v zdroji} few {# transakcie sa zmenili v zdroji} other {# transakcií sa zmenilo v zdroji}}",
+    "conflictBody": "poskytovateľ poslal inú verziu"
+  },
+  "recent": {
+    "title": "Posledné transakcie",
+    "count": "{total} za {month}",
+    "seeAll": "Zobraziť všetky",
+    "empty": "Za {month} nie sú žiadne transakcie.",
+    "caption": "Najnovšie transakcie za {month}. Transakciu otvoríte výberom príjemcu.",
+    "list": "Najnovšie transakcie za {month}",
+    "shown": "{shown} z {total}",
+    "openRegister": "Otvoriť všetky transakcie"
+  },
+  "spending": {
+    "title": "Výdavky podľa kategórií",
+    "lastMonths": "{count, plural, one {Posledný # mesiac} few {Posledné # mesiace} other {Posledných # mesiacov}}",
+    "period": "Obdobie",
+    "together": "Spolu",
+    "oneMonth": "Jeden mesiac",
+    "noneInLast": "{count, plural, one {Za posledný # mesiac nie sú žiadne výdavky.} few {Za posledné # mesiace nie sú žiadne výdavky.} other {Za posledných # mesiacov nie sú žiadne výdavky.}}",
+    "none": "Za {month} nie sú žiadne výdavky.",
+    "uncategorized": "Bez kategórie",
+    "other": "Ostatné kategórie"
+  },
+  "categories": {
+    "title": "Kategórie",
+    "manage": "Spravovať"
+  },
+  "accounts": {
+    "title": "Účty",
+    "manage": "Spravovať",
+    "balances": "Zostatky ku koncu obdobia {month}",
+    "archived": ", archivovaný",
+    "thisMonth": "Tento mesiac: ",
+    "total": "Spolu v EUR"
+  },
+  "month": {
+    "label": "Mesiac",
+    "previous": "Predchádzajúci mesiac",
+    "next": "Nasledujúci mesiac",
+    "choose": "Mesiac: {month}. Vybrať mesiac",
+    "current": "Prejsť na aktuálny mesiac"
+  },
+  "account": "Účet",
+  "allAccounts": "Všetky účty",
+  "invalid": "Vyberte iný mesiac alebo účet.",
+  "showCurrent": "Zobraziť aktuálny mesiac",
+  "empty": {
+    "title": "Začnite pridaním účtu",
+    "body": "Zaznamenajte transakcie ručne alebo importujte súbor CSV a zobrazia sa tu vaše mesačné súčty.",
+    "addAccount": "Pridať účet",
+    "import": "Importovať súbor"
+  },
+  "footnote": "Sumy sú v EUR. Zahraničné transakcie používajú kurz uložený pri ich importe. Prevody medzi vašimi účtami sa do súčtov nezapočítavajú.",
+  "charts": {
+    "legend": "Legenda",
+    "income": "Príjmy",
+    "spending": "Výdavky",
+    "net": "Bilancia",
+    "month": "Mesiac",
+    "trendLabel": "Príjmy a výdavky za dvanásť mesiacov. Šípkami prechádzate jednotlivé mesiace, klávesom Enter mesiac otvoríte.",
+    "trendLive": "{month}: príjmy {income}, výdavky {spending}, bilancia {net}.",
+    "tableCaption": "Príjmy, výdavky po odpočítaní vrátených platieb a čistý peňažný tok podľa mesiacov v EUR",
+    "byCategory": "Výdavky podľa kategórií",
+    "byCategoryIn": "Výdavky podľa kategórií, {period}",
+    "showTransactions": ", zobraziť tieto transakcie",
+    "spent": "Minuté"
+  }
+}

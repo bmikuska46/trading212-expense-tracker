@@ -1,0 +1,22 @@
+{
+  "errors": {
+    "generic": "Niečo sa pokazilo. Skúste to znova.",
+    "request": "Server nedokázal požiadavku spracovať.",
+    "response": "Server vrátil neočakávanú odpoveď.",
+    "unavailable": "Aplikačný server je nedostupný. Skontrolujte, či beží, a skúste to znova."
+  },
+  "kinds": {
+    "expense": "Výdavok",
+    "income": "Príjem",
+    "transfer": "Prevod",
+    "refund": "Vrátenie platby"
+  },
+  "pagination": {
+    "previous": "Predchádzajúca strana",
+    "next": "Ďalšia strana"
+  },
+  "cancel": "Zrušiť",
+  "saving": "Ukladám",
+  "loading": "Načítavam",
+  "actions": "Akcie"
+}

@@ -1,0 +1,22 @@
+{
+  "errors": {
+    "generic": "Something went wrong. Try again.",
+    "request": "The server could not complete the request.",
+    "response": "The server returned an unexpected response.",
+    "unavailable": "The application server is unavailable. Check that it is running, then try again."
+  },
+  "kinds": {
+    "expense": "Expense",
+    "income": "Income",
+    "transfer": "Transfer",
+    "refund": "Refund"
+  },
+  "pagination": {
+    "previous": "Previous page",
+    "next": "Next page"
+  },
+  "cancel": "Cancel",
+  "saving": "Saving",
+  "loading": "Loading",
+  "actions": "Actions"
+}

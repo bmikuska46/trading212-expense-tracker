@@ -1,0 +1,5 @@
+# Run this reverse proxy on the host. Use private DNS and restrict access to the LAN/VPN.
+budget.home.arpa {
+    tls internal
+    reverse_proxy 127.0.0.1:8080
+}

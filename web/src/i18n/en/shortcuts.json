@@ -1,0 +1,28 @@
+{
+  "title": "Keyboard shortcuts",
+  "description": "Shortcuts pause while you type in a field or while a dialog is open.",
+  "then": "then",
+  "groups": {
+    "anywhere": "Anywhere",
+    "overview": "Overview",
+    "transactions": "Transactions"
+  },
+  "items": {
+    "showShortcuts": "Show keyboard shortcuts",
+    "commands": "Search and run commands",
+    "record": "Record activity",
+    "sidebar": "Collapse or expand the sidebar",
+    "refreshStatus": "Refresh the connection status",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "search": "Search",
+    "nextRow": "Next row",
+    "previousRow": "Previous row",
+    "toggleRow": "Select or clear the current row",
+    "openRow": "Open the current row",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "clearSelection": "Clear the selection"
+  },
+  "goTo": "Go to {page}"
+}

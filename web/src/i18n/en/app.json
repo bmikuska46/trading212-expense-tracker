@@ -1,0 +1,34 @@
+{
+  "name": "Spend212",
+  "title": "{page} | Spend212",
+  "description": "Expense tracker for Trading 212 and any bank.",
+  "pages": {
+    "overview": "Overview",
+    "transactions": "Transactions",
+    "accounts": "Accounts",
+    "categories": "Categories",
+    "payees": "Payees",
+    "subscriptions": "Subscriptions",
+    "investing": "Investing",
+    "chat": "Ask",
+    "imports": "Imports",
+    "settings": "Settings",
+    "login": "Sign in",
+    "onboarding": "Set up your workspace",
+    "changePassword": "Choose a password"
+  },
+  "groups": {
+    "ledger": "Ledger",
+    "organize": "Organize",
+    "investing": "Investing",
+    "assistant": "Assistant",
+    "data": "Data"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": "Language"
+}

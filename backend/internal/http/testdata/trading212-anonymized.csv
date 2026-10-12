@@ -1,0 +1,10 @@
+Action,Time (UTC),Notes,ID,Total,Currency (Total),Currency conversion fee,Currency (Currency conversion fee),Merchant name,Merchant category
+Card debit,2026-08-02 09:14:22,,00000000-anon-0000-0000-000000000001,-12.40,EUR,,,Example Bistro,RESTAURANTS
+Card debit,2026-08-03 17:45:10,,00000000-anon-0000-0000-000000000002,-54.99,EUR,,,Example Market,RETAIL_STORES
+Spending cashback,2026-08-03 17:45:11,,00000000-anon-0000-0000-000000000003,0.27,EUR,,,,
+Deposit,2026-08-05 08:00:00,Bank transfer,00000000-anon-0000-0000-000000000004,500.00,EUR,,,,
+Card debit,2026-08-07 12:00:05,"Line one
+line two",00000000-anon-0000-0000-000000000005,-8.10,EUR,0.02,EUR,Sample Kiosk,MISCELLANEOUS
+Withdrawal,2026-08-10 10:30:00,,00000000-anon-0000-0000-000000000006,-100.00,EUR,,,,
+Card debit,2026-08-12 19:20:00,,00000000-anon-0000-0000-000000000007,-23.50,EUR,,,"Example Bistro, Downtown",RESTAURANTS
+Spending cashback,2026-08-12 19:20:01,,00000000-anon-0000-0000-000000000008,0.12,EUR,,,,

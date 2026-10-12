@@ -1,0 +1,43 @@
+{
+  "history": "Chat history",
+  "historyDescription": "Your earlier questions, newest first.",
+  "historyButton": "History",
+  "newChat": "New chat",
+  "notConnected": {
+    "title": "TypeSafe is not connected",
+    "body": "Questions are read by TypeSafe. Add your API key in <link>Settings</link> to ask them. Only your question is sent; your ledger stays on this server."
+  },
+  "missing": {
+    "title": "This chat could not be opened",
+    "startNew": "Start a new chat"
+  },
+  "loading": "Loading chat",
+  "reading": "Reading your question",
+  "notAnswered": "The question was not answered",
+  "question": "Your question",
+  "placeholder": "Ask about your spending, income, accounts, or investments",
+  "placeholderOff": "Connect TypeSafe to ask questions",
+  "ask": "Ask",
+  "hint": "Enter sends, Shift+Enter adds a line.",
+  "left": "{count, plural, one {# character left.} other {# characters left.}}",
+  "welcome": {
+    "title": "Ask about your money",
+    "body": "Answers come straight from your ledger. Name a period, payee, category, account, or amount to narrow a question, and ask follow-ups such as \"and last month?\"."
+  },
+  "loadingChats": "Loading chats",
+  "noChats": "No chats yet. Your questions will be kept here.",
+  "actionsFor": "Actions for {title}",
+  "rename": "Rename",
+  "delete": "Delete",
+  "renameDialog": {
+    "title": "Rename chat",
+    "description": "The title is shown in your chat history.",
+    "label": "Title",
+    "save": "Save"
+  },
+  "deleteDialog": {
+    "title": "Delete this chat?",
+    "description": "\"{title}\" and its answers are removed for good. Your ledger is not changed.",
+    "deleting": "Deleting"
+  }
+}
