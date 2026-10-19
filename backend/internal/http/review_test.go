@@ -336,7 +336,7 @@ func TestScheduledImportsAndFailureNotifications(t *testing.T) {
 	ctx := context.Background()
 
 	status := decode[scheduledImportsView](t, app.expect(http.StatusOK, "GET", "/api/scheduled-imports", nil, cookie))
-	if status.Enabled || len(status.Jobs) != 0 || status.NextRunAt != "2026-10-01T04:00:00Z" || status.Timezone != "Europe/Bratislava" {
+	if status.Enabled || len(status.Jobs) != 0 || status.NextRunAt != "2026-09-16T04:00:00Z" || status.Timezone != "Europe/Bratislava" {
 		t.Fatalf("status: %+v", status)
 	}
 	if response := app.request("POST", "/api/scheduled-imports/2026-08/run", nil, cookie); response.Code != http.StatusConflict {
@@ -349,7 +349,7 @@ func TestScheduledImportsAndFailureNotifications(t *testing.T) {
 		Enabled:         1, EarliestAutomaticPeriod: nullString("2026-08"), SourceAccountID: sql.NullInt64{Int64: account, Valid: true}}); err != nil {
 		t.Fatal(err)
 	}
-	for _, period := range []string{"2026-07", "2026-09", "2026-8", "latest"} {
+	for _, period := range []string{"2026-07", "2026-10", "2026-8", "latest"} {
 		if response := app.request("POST", "/api/scheduled-imports/"+period+"/run", nil, cookie); response.Code != http.StatusNotFound {
 			t.Fatalf("rerun %s: %d", period, response.Code)
 		}

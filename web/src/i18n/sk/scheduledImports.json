@@ -16,11 +16,11 @@
   "retryAfter": "Opakovanie č. {count} po chybe: {error}.",
   "nextStep": "Ďalší krok {date}.",
   "rerunStarted": "Import za obdobie {month} sa spustil znova. Transakcie, ktoré už sú v záznamoch, sa preskočia.",
-  "title": "Mesačné importy z Trading 212",
+  "title": "Importy transakcií z Trading 212",
   "on": "zapnuté",
   "off": "vypnuté",
-  "loading": "Načítavam mesačné importy",
-  "enabled": "Importuje sa každý mesiac, počínajúc obdobím {month}. Ďalšie spustenie <time>{date}</time> ({timezone}).",
+  "loading": "Načítavam importy z Trading 212",
+  "enabled": "Importuje sa každý deň, počínajúc obdobím {month}. Ďalšie spustenie <time>{date}</time> ({timezone}).",
   "disabled": "Automatické importy sú vypnuté. Zapnite ich pre Trading 212 v <link>Nastaveniach</link>.",
   "caption": "Staršia história sa nikdy nevyžiada. Opakovaný import mesiaca preskočí transakcie, ktoré už sú v záznamoch.",
   "month": "Mesiac",
@@ -29,5 +29,5 @@
   "actions": "Akcie",
   "open": "Otvoriť import",
   "rerun": "Importovať znova",
-  "footer": "Vždy 1. dňa v mesiaci o 06:00 si server vyžiada od Trading 212 výpis za predchádzajúci mesiac a naimportuje ho. Nové transakcie počkajú na vašu kontrolu."
+  "footer": "Každý deň o 06:00 si server vyžiada od Trading 212 výpis za aktuálny mesiac do predchádzajúceho dňa a nové transakcie naimportuje bez kontroly. 1. dňa v mesiaci dokončí predchádzajúci mesiac."
 }

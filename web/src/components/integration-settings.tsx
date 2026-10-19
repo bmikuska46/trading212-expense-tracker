@@ -161,7 +161,7 @@ type Trading212Values = {
 
 const allSync: Trading212Sync = { portfolio: true, pies: true, dividends: true, interest: true, cashback: true };
 
-// The monthly card transaction import is the integration's enabled flag;
+// The daily card transaction import is the integration's enabled flag;
 // the other parts run in the background whenever a key is saved.
 function Trading212SyncFields({ form }: { form: UseFormReturn<Trading212Values> }) {
   const t = useTranslations("integrations.trading212");

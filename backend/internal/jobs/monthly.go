@@ -35,9 +35,10 @@ const (
 )
 
 const (
-	// MonthlyHour is when the previous month is requested on the 1st,
-	// Europe/Bratislava time.
-	MonthlyHour = 6
+	// DailyHour is when each day the open month is synced through the day
+	// before, Europe/Bratislava time. On the 1st that finishes the previous
+	// month.
+	DailyHour = 6
 	// The requested range is widened on both sides; rows outside the month
 	// are dropped before staging.
 	reportOverlap = time.Hour
@@ -52,8 +53,9 @@ const (
 	slowPoll       = 5 * time.Minute
 )
 
-// Monthly requests the previous month's Trading 212 report at 06:00 on the
-// 1st, waits for it, and imports its transactions. Its state lives in
+// Monthly keeps one job per month of Trading 212 transactions. Every day at
+// 06:00 it requests the month's report through the day before, waits for
+// it, and imports the new transactions without a review. Its state lives in
 // scheduled_jobs, so a restart resumes where it stopped. One job runs at a
 // time and shares the import pipeline with the app.
 type Monthly struct {
@@ -112,10 +114,47 @@ func MonthBounds(period string) (time.Time, time.Time, error) {
 	return start.UTC(), start.AddDate(0, 1, 0).UTC(), nil
 }
 
-// MonthlyRunAt is 06:00 Europe/Bratislava on the 1st after the month.
-func MonthlyRunAt(period string) time.Time {
-	month, _ := time.Parse("2006-01", period)
-	return time.Date(month.Year(), month.Month()+1, 1, MonthlyHour, 0, 0, 0, rates.Location)
+// RunAfter is 06:00 Europe/Bratislava on the day after the one an instant
+// falls on: the first daily run that can sync past it.
+func RunAfter(instant time.Time) time.Time {
+	local := instant.In(rates.Location)
+	return time.Date(local.Year(), local.Month(), local.Day()+1, DailyHour, 0, 0, 0, rates.Location)
+}
+
+// FirstRunAt is when a month is first synced: 06:00 on its 2nd day.
+func FirstRunAt(period string) time.Time {
+	start, _, _ := MonthBounds(period)
+	return RunAfter(start)
+}
+
+// NextDailyRun is the next 06:00 after now.
+func NextDailyRun(now time.Time) time.Time {
+	local := now.In(rates.Location)
+	today := time.Date(local.Year(), local.Month(), local.Day(), DailyHour, 0, 0, 0, rates.Location)
+	if today.After(now) {
+		return today
+	}
+	return RunAfter(now)
+}
+
+// syncThrough is where a report requested now may end: the start of the
+// local day, so that with the overlap the range is in the past, but never
+// past the month.
+func syncThrough(now, end time.Time) time.Time {
+	local := now.Add(-reportOverlap).In(rates.Location)
+	if day := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, rates.Location).UTC(); day.Before(end) {
+		return day
+	}
+	return end
+}
+
+// syncedThrough is where a job's last report ended, or the month's start.
+func syncedThrough(job dbgen.ScheduledJob) time.Time {
+	if through, err := time.Parse(time.RFC3339, job.ReportTo.String); err == nil {
+		return through
+	}
+	start, _ := time.Parse(time.RFC3339, job.PeriodStartUtc.String)
+	return start
 }
 
 // Period is the Europe/Bratislava month of an instant.
@@ -126,25 +165,16 @@ func shiftPeriod(period string, months int) string {
 	return month.AddDate(0, months, 0).Format("2006-01")
 }
 
-// DuePeriods lists the months from earliest on whose run time has passed.
+// DuePeriods lists the months from earliest on whose first run has passed.
 func DuePeriods(earliest string, now time.Time) []string {
 	periods := []string{}
 	if _, err := time.Parse("2006-01", earliest); err != nil {
 		return periods
 	}
-	for period := earliest; !MonthlyRunAt(period).After(now); period = shiftPeriod(period, 1) {
+	for period := earliest; !FirstRunAt(period).After(now); period = shiftPeriod(period, 1) {
 		periods = append(periods, period)
 	}
 	return periods
-}
-
-// NextMonthlyRun is the next 06:00 on the 1st after now.
-func NextMonthlyRun(now time.Time) time.Time {
-	current := Period(now)
-	if previous := MonthlyRunAt(shiftPeriod(current, -1)); previous.After(now) {
-		return previous
-	}
-	return MonthlyRunAt(current)
 }
 
 type monthlySource struct {
@@ -162,8 +192,9 @@ func (m *Monthly) source(ctx context.Context) (monthlySource, bool, error) {
 	return monthlySource{credentials: credentials, account: row.SourceAccountID, earliest: row.EarliestAutomaticPeriod.String}, true, nil
 }
 
-// Step creates the jobs that are due, advances the oldest open job by one
-// stage, and returns when the next step should run.
+// Step creates the jobs that are due, reopens the months whose daily sync is
+// due, advances the oldest open job by one stage, and returns when the next
+// step should run.
 func (m *Monthly) Step(ctx context.Context) (time.Time, error) {
 	now := m.Now()
 	source, enabled, err := m.source(ctx)
@@ -182,13 +213,26 @@ func (m *Monthly) Step(ctx context.Context) (time.Time, error) {
 		slog.Info("canceled monthly imports", "count", len(canceled))
 	}
 	for _, period := range DuePeriods(source.earliest, now) {
-		if err := m.ensure(ctx, source.account, period, MonthlyRunAt(period)); err != nil {
+		if err := m.ensure(ctx, source.account, period, FirstRunAt(period)); err != nil {
+			return time.Time{}, err
+		}
+	}
+	partial, err := q.ListPartialMonthlyJobs(ctx, dbgen.ListPartialMonthlyJobsParams{
+		SourceAccountID: source.account, PeriodKey: source.earliest})
+	if err != nil {
+		return time.Time{}, err
+	}
+	for _, job := range partial {
+		if now.Before(RunAfter(syncedThrough(job))) {
+			continue
+		}
+		if _, err := q.RerunMonthlyJob(ctx, dbgen.RerunMonthlyJobParams{NextAttemptAt: stamp(now).String, ID: job.ID}); err != nil {
 			return time.Time{}, err
 		}
 	}
 	job, err := q.NextMonthlyJob(ctx, source.account)
 	if errors.Is(err, sql.ErrNoRows) {
-		return NextMonthlyRun(now), nil
+		return NextDailyRun(now), nil
 	}
 	if err != nil {
 		return time.Time{}, err
@@ -214,9 +258,9 @@ func (m *Monthly) ensure(ctx context.Context, account sql.NullInt64, period stri
 	})
 }
 
-// Rerun schedules a month again right away. Existing transaction IDs are
-// skipped as duplicates, so a rerun never duplicates rows. It returns false
-// when the month's job is still running.
+// Rerun schedules a month again right away, from its start. Existing
+// transaction IDs are skipped as duplicates, so a rerun or a daily sync never
+// duplicates rows. It returns false when the month's job is still running.
 func Rerun(ctx context.Context, q *dbgen.Queries, account int64, period string, now time.Time) (bool, error) {
 	key := sql.NullInt64{Int64: account, Valid: true}
 	job, err := q.GetMonthlyJob(ctx, dbgen.GetMonthlyJobParams{SourceAccountID: key, PeriodKey: period})
@@ -254,7 +298,7 @@ func (m *Monthly) advance(ctx context.Context, job dbgen.ScheduledJob, source mo
 func (m *Monthly) save(ctx context.Context, q *dbgen.Queries, job dbgen.ScheduledJob) error {
 	return q.SaveMonthlyJob(ctx, dbgen.SaveMonthlyJobParams{
 		State: job.State, ReportID: job.ReportID, ReportStatus: job.ReportStatus, ReportRequestedAt: job.ReportRequestedAt,
-		BatchID: job.BatchID, RetryCount: job.RetryCount, NextAttemptAt: job.NextAttemptAt,
+		ReportTo: job.ReportTo, BatchID: job.BatchID, RetryCount: job.RetryCount, NextAttemptAt: job.NextAttemptAt,
 		LastErrorCode: job.LastErrorCode, LastErrorDetail: job.LastErrorDetail, ID: job.ID,
 	})
 }
@@ -321,11 +365,11 @@ func (m *Monthly) call(ctx context.Context, job dbgen.ScheduledJob, stage string
 	return callErr
 }
 
-// reportRange is the requested range: the month with a small overlap.
+// reportRange is the requested range: the month from its start through
+// report_to, with a small overlap.
 func reportRange(job dbgen.ScheduledJob) (time.Time, time.Time) {
 	start, _ := time.Parse(time.RFC3339, job.PeriodStartUtc.String)
-	end, _ := time.Parse(time.RFC3339, job.PeriodEndUtc.String)
-	return start.Add(-reportOverlap), end.Add(reportOverlap)
+	return start.Add(-reportOverlap), syncedThrough(job).Add(reportOverlap)
 }
 
 // matching finds the newest usable report for a range.
@@ -346,7 +390,6 @@ func matching(reports []integrations.Report, from, to time.Time) (integrations.R
 
 func (m *Monthly) request(ctx context.Context, job dbgen.ScheduledJob, source monthlySource) error {
 	now := m.Now()
-	from, to := reportRange(job)
 	if job.State == stateRequesting {
 		// The last request may have created a report before its response
 		// was lost. Look for it before asking for another one.
@@ -365,6 +408,7 @@ func (m *Monthly) request(ctx context.Context, job dbgen.ScheduledJob, source mo
 		if err != nil {
 			return m.retry(ctx, job, err)
 		}
+		from, to := reportRange(job)
 		if report, ok := matching(reports, from, to); ok {
 			return m.polling(ctx, job, report.ID)
 		}
@@ -378,6 +422,9 @@ func (m *Monthly) request(ctx context.Context, job dbgen.ScheduledJob, source mo
 	if now.Before(at) {
 		return m.later(ctx, job, at)
 	}
+	end, _ := time.Parse(time.RFC3339, job.PeriodEndUtc.String)
+	job.ReportTo = stamp(syncThrough(now, end))
+	from, to := reportRange(job)
 	// Saved before the call, so a lost response is looked up next time.
 	job.State = stateRequesting
 	if err := m.save(ctx, m.Store.Queries, job); err != nil {
@@ -467,9 +514,10 @@ func (m *Monthly) poll(ctx context.Context, job dbgen.ScheduledJob, source month
 	return m.stage(ctx, job, data)
 }
 
-// monthRows keeps the header and the rows whose time falls in [start, end).
-// Rows without a readable time stay, so validation reports them.
-func monthRows(data []byte, start, end time.Time) ([]byte, int, error) {
+// monthRows keeps the header and the rows whose time falls in [start, end),
+// leaving out the rows the owner already handled. Rows without a readable
+// time stay, so validation reports them.
+func monthRows(data []byte, start, end time.Time, handled map[string]bool) ([]byte, int, error) {
 	reader, err := imports.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, 0, err
@@ -498,6 +546,9 @@ func monthRows(data []byte, start, end time.Time) ([]byte, int, error) {
 				continue
 			}
 		}
+		if key, _ := json.Marshal(record); handled[string(key)] {
+			continue
+		}
 		if err := writer.Write(record); err != nil {
 			return nil, 0, err
 		}
@@ -505,6 +556,10 @@ func monthRows(data []byte, start, end time.Time) ([]byte, int, error) {
 	}
 	writer.Flush()
 	return output.Bytes(), count, writer.Error()
+}
+
+func reportFilename(job dbgen.ScheduledJob) string {
+	return "trading212-" + job.PeriodKey + ".csv"
 }
 
 func (m *Monthly) location(ctx context.Context) *time.Location {
@@ -522,16 +577,23 @@ func (m *Monthly) location(ctx context.Context) *time.Location {
 func (m *Monthly) stage(ctx context.Context, job dbgen.ScheduledJob, data []byte) error {
 	start, _ := time.Parse(time.RFC3339, job.PeriodStartUtc.String)
 	end, _ := time.Parse(time.RFC3339, job.PeriodEndUtc.String)
-	filtered, count, err := monthRows(data, start, end)
+	rows, err := m.Store.Queries.HandledReportRows(ctx, job.SourceAccountID.Int64)
+	if err != nil {
+		return err
+	}
+	handled := map[string]bool{}
+	for _, row := range rows {
+		handled[row] = true
+	}
+	filtered, count, err := monthRows(data, start, end, handled)
 	if err != nil {
 		return m.fail(ctx, job, "unreadable_report", "The report is not a CSV file this app can read.")
 	}
 	if count == 0 {
-		slog.Info("monthly report has no transactions", "period", job.PeriodKey)
-		job.State = stateCompleted
-		return m.progress(ctx, job, m.Now())
+		slog.Info("monthly report has no new transactions", "period", job.PeriodKey)
+		return m.complete(ctx, job)
 	}
-	batchID, err := m.Imports.Stage(ctx, job.SourceAccountID.Int64, "trading212-"+job.PeriodKey+".csv",
+	batchID, err := m.Imports.Stage(ctx, job.SourceAccountID.Int64, reportFilename(job),
 		bytes.NewReader(filtered), m.location(ctx))
 	var known *imports.Error
 	switch {
@@ -549,9 +611,9 @@ func (m *Monthly) stage(ctx context.Context, job dbgen.ScheduledJob, data []byte
 	return m.importBatch(ctx, job)
 }
 
-// importBatch commits a staged report when it validated cleanly. A report
-// that needs a mapping or row corrections waits for the owner, who commits
-// it in the app; that commit completes the job.
+// importBatch commits a staged report when it validated cleanly, already
+// confirmed. A report that needs a mapping or row corrections waits for the
+// owner, who commits it in the app; that commit completes the job.
 func (m *Monthly) importBatch(ctx context.Context, job dbgen.ScheduledJob) error {
 	removed := "The import was removed before it was committed. Run the month again to import it."
 	if !job.BatchID.Valid {
@@ -570,7 +632,7 @@ func (m *Monthly) importBatch(ctx context.Context, job dbgen.ScheduledJob) error
 	case batch.Status == "committed":
 		return m.complete(ctx, job)
 	case ready && batch.Status == "validating":
-		if stepErr = m.Imports.Commit(ctx, batch.ID, m.location(ctx)); stepErr == nil {
+		if stepErr = m.Imports.CommitConfirmed(ctx, batch.ID, m.location(ctx)); stepErr == nil {
 			return m.complete(ctx, job)
 		}
 	case ready && batch.Status == "staging":
@@ -609,10 +671,54 @@ func attentionReason(batch dbgen.ImportBatch) string {
 	return fmt.Sprintf("%d rows need a correction or exclusion. Open the import, resolve them, and commit it.", batch.ErrorCount)
 }
 
+// complete finishes the job. A batch that added nothing is deleted, so a
+// daily sync without new transactions leaves no import behind, and the month
+// points at its last batch that added some.
 func (m *Monthly) complete(ctx context.Context, job dbgen.ScheduledJob) error {
-	job.State = stateCompleted
+	job.State, job.NextAttemptAt = stateCompleted, stamp(m.Now()).String
+	job.RetryCount, job.LastErrorCode, job.LastErrorDetail = 0, sql.NullString{}, sql.NullString{}
+	tx, err := m.Store.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	q := m.Store.Queries.WithTx(tx)
+	if job.BatchID.Valid {
+		batch, err := q.GetImportBatch(ctx, job.BatchID.Int64)
+		if err != nil {
+			return err
+		}
+		if batch.Status == "committed" && batch.InsertedCount == 0 {
+			empty := job.BatchID
+			job.BatchID = sql.NullInt64{}
+			if err := m.save(ctx, q, job); err != nil {
+				return err
+			}
+			// A batch that recorded a source conflict stays.
+			if deleted, err := q.DeleteEmptyBatch(ctx, empty.Int64); err != nil || deleted == 0 {
+				job.BatchID = empty
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if !job.BatchID.Valid {
+		previous, err := q.PreviousMonthlyBatch(ctx, dbgen.PreviousMonthlyBatchParams{
+			SourceAccountID: job.SourceAccountID.Int64, Filename: reportFilename(job)})
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		job.BatchID = sql.NullInt64{Int64: previous, Valid: err == nil}
+	}
+	if err := m.save(ctx, q, job); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
 	slog.Info("monthly import completed", "period", job.PeriodKey)
-	return m.progress(ctx, job, m.Now())
+	return nil
 }
 
 // retry schedules another attempt after a transient failure, with bounded

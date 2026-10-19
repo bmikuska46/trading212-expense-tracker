@@ -125,7 +125,7 @@ func (a *api) listScheduledImports(w http.ResponseWriter, r *http.Request, _ *se
 		return
 	}
 	view := scheduledImportsView{Enabled: enabled, EarliestPeriod: row.EarliestAutomaticPeriod.String,
-		Timezone: rates.Timezone, NextRunAt: auth.FormatTime(jobs.NextMonthlyRun(a.now())), Jobs: []scheduledJobView{}}
+		Timezone: rates.Timezone, NextRunAt: auth.FormatTime(jobs.NextDailyRun(a.now())), Jobs: []scheduledJobView{}}
 	if row.SourceAccountID.Valid {
 		view.AccountID = &row.SourceAccountID.Int64
 	}
@@ -143,8 +143,9 @@ func (a *api) listScheduledImports(w http.ResponseWriter, r *http.Request, _ *se
 	writeJSON(w, http.StatusOK, view)
 }
 
-// rerunScheduledImport imports a finished month again. Transactions already
-// imported are skipped by their IDs, so a rerun only adds what is missing.
+// rerunScheduledImport imports a month again from its start. Transactions
+// already imported are skipped by their IDs, so a rerun only adds what is
+// missing.
 func (a *api) rerunScheduledImport(w http.ResponseWriter, r *http.Request, _ *session) {
 	period := r.PathValue("period")
 	row, enabled, err := a.monthlySource(r.Context())
@@ -158,8 +159,8 @@ func (a *api) rerunScheduledImport(w http.ResponseWriter, r *http.Request, _ *se
 	}
 	now := a.now()
 	if _, _, err := jobs.MonthBounds(period); err != nil || period < row.EarliestAutomaticPeriod.String ||
-		jobs.MonthlyRunAt(period).After(now) {
-		writeError(w, http.StatusNotFound, fmt.Sprintf("Only months from %s up to the last finished month can be imported",
+		jobs.FirstRunAt(period).After(now) {
+		writeError(w, http.StatusNotFound, fmt.Sprintf("Only months from %s up to the current month can be imported",
 			row.EarliestAutomaticPeriod.String))
 		return
 	}

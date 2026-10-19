@@ -47,9 +47,9 @@ function Details({ job }: { job: ScheduledJob }) {
   return `${retry} ${next}`;
 }
 
-// ScheduledImports shows the monthly Trading 212 imports. The server runs
-// them at 06:00 on the 1st and catches up missed months on its own; a
-// finished month can be imported again, which only adds missing rows.
+// ScheduledImports shows the Trading 212 imports, one per month. The server
+// syncs the open month at 06:00 every day and catches up missed months on its
+// own; a month can be imported again, which only adds missing rows.
 export function ScheduledImports() {
   const t = useTranslations("scheduledImports");
   const client = useQueryClient();

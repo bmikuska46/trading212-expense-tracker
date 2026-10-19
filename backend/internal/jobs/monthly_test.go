@@ -3,9 +3,11 @@ package jobs
 import (
 	"context"
 	"database/sql"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -19,6 +21,7 @@ import (
 	"budget-tracking/backend/internal/imports"
 	"budget-tracking/backend/internal/integrations"
 	"budget-tracking/backend/internal/rates"
+	"budget-tracking/backend/migrations"
 )
 
 // augustReport is a Trading 212 transactions export for August 2026 with the
@@ -117,10 +120,35 @@ func (f *fakeTrading212) serve(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(items)
 	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/download/"):
 		f.downloads++
-		io.WriteString(w, f.csv)
+		for _, report := range f.reports {
+			if report.id == strings.TrimPrefix(r.URL.Path, "/download/") {
+				io.WriteString(w, inRange(f.csv, report.from, report.to))
+			}
+		}
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
+}
+
+// inRange keeps the rows of a report whose time is within its range.
+func inRange(report, from, to string) string {
+	rows, err := csv.NewReader(strings.NewReader(report)).ReadAll()
+	if err != nil || len(rows) == 0 {
+		return report
+	}
+	start, end := utc(from), utc(to)
+	column := slices.Index(rows[0], "Time (UTC)")
+	var out strings.Builder
+	writer := csv.NewWriter(&out)
+	_ = writer.Write(rows[0])
+	for _, row := range rows[1:] {
+		at, err := time.Parse(time.DateTime, row[column])
+		if err == nil && !at.Before(start) && !at.After(end) {
+			_ = writer.Write(row)
+		}
+	}
+	writer.Flush()
+	return out.String()
 }
 
 func (f *fakeTrading212) setStatus(status string) {
@@ -265,40 +293,41 @@ func utc(text string) time.Time {
 
 func TestMonthBoundsAcrossDST(t *testing.T) {
 	cases := []struct {
-		period, start, end, runAt string
+		period, start, end, firstRun string
 	}{
 		// Summer time starts on 29 March and ends on 25 October 2026.
-		{"2026-03", "2026-02-28T23:00:00Z", "2026-03-31T22:00:00Z", "2026-04-01T04:00:00Z"},
-		{"2026-08", "2026-07-31T22:00:00Z", "2026-08-31T22:00:00Z", "2026-09-01T04:00:00Z"},
-		{"2026-10", "2026-09-30T22:00:00Z", "2026-10-31T23:00:00Z", "2026-11-01T05:00:00Z"},
-		{"2026-12", "2026-11-30T23:00:00Z", "2026-12-31T23:00:00Z", "2027-01-01T05:00:00Z"},
+		{"2026-03", "2026-02-28T23:00:00Z", "2026-03-31T22:00:00Z", "2026-03-02T05:00:00Z"},
+		{"2026-08", "2026-07-31T22:00:00Z", "2026-08-31T22:00:00Z", "2026-08-02T04:00:00Z"},
+		{"2026-10", "2026-09-30T22:00:00Z", "2026-10-31T23:00:00Z", "2026-10-02T04:00:00Z"},
+		{"2026-12", "2026-11-30T23:00:00Z", "2026-12-31T23:00:00Z", "2026-12-02T05:00:00Z"},
 	}
 	for _, c := range cases {
 		start, end, err := MonthBounds(c.period)
 		if err != nil || !start.Equal(utc(c.start)) || !end.Equal(utc(c.end)) {
 			t.Fatalf("%s bounds = %s, %s, %v", c.period, start, end, err)
 		}
-		if runAt := MonthlyRunAt(c.period); !runAt.Equal(utc(c.runAt)) {
-			t.Fatalf("%s runs at %s", c.period, runAt.UTC())
+		if firstRun := FirstRunAt(c.period); !firstRun.Equal(utc(c.firstRun)) {
+			t.Fatalf("%s first runs at %s", c.period, firstRun.UTC())
 		}
 	}
 	if _, _, err := MonthBounds("2026-13"); err == nil {
 		t.Fatal("invalid month accepted")
 	}
 
-	expectTime(t, NextMonthlyRun(at("2026-09-30", 12, 0)), at("2026-10-01", 6, 0))
-	expectTime(t, NextMonthlyRun(at("2026-10-01", 5, 59)), at("2026-10-01", 6, 0))
-	expectTime(t, NextMonthlyRun(at("2026-10-01", 6, 0)), at("2026-11-01", 6, 0))
-	expectTime(t, NextMonthlyRun(at("2026-12-31", 23, 0)), at("2027-01-01", 6, 0))
+	expectTime(t, NextDailyRun(at("2026-09-30", 12, 0)), at("2026-10-01", 6, 0))
+	expectTime(t, NextDailyRun(at("2026-10-01", 5, 59)), at("2026-10-01", 6, 0))
+	expectTime(t, NextDailyRun(at("2026-10-01", 6, 0)), at("2026-10-02", 6, 0))
+	expectTime(t, NextDailyRun(at("2026-10-24", 23, 0)), at("2026-10-25", 6, 0))
+	expectTime(t, NextDailyRun(at("2026-12-31", 23, 0)), at("2027-01-01", 6, 0))
 
-	if due := DuePeriods("2026-06", at("2026-09-01", 5, 59)); !slices.Equal(due, []string{"2026-06", "2026-07"}) {
+	if due := DuePeriods("2026-06", at("2026-09-02", 5, 59)); !slices.Equal(due, []string{"2026-06", "2026-07", "2026-08"}) {
 		t.Fatalf("due before 06:00 = %v", due)
 	}
-	if due := DuePeriods("2026-06", at("2026-09-01", 6, 0)); !slices.Equal(due, []string{"2026-06", "2026-07", "2026-08"}) {
+	if due := DuePeriods("2026-06", at("2026-09-02", 6, 0)); !slices.Equal(due, []string{"2026-06", "2026-07", "2026-08", "2026-09"}) {
 		t.Fatalf("due at 06:00 = %v", due)
 	}
-	if due := DuePeriods("2026-09", at("2026-09-30", 12, 0)); len(due) != 0 {
-		t.Fatalf("current month is due: %v", due)
+	if due := DuePeriods("2026-10", at("2026-10-01", 12, 0)); len(due) != 0 {
+		t.Fatalf("a month is due on its 1st: %v", due)
 	}
 }
 
@@ -313,7 +342,7 @@ func TestMonthRowsFilterHalfOpenMonth(t *testing.T) {
 		"Deposit,2026-10-31 22:59:59,last,1.00,EUR\n" +
 		"Deposit,2026-10-31 23:00:00,after,1.00,EUR\n" +
 		"Deposit,not a time,unreadable,1.00,EUR\n"
-	filtered, count, err := monthRows([]byte(report), start, end)
+	filtered, count, err := monthRows([]byte(report), start, end, nil)
 	if err != nil || count != 5 {
 		t.Fatalf("count = %d, %v", count, err)
 	}
@@ -333,13 +362,7 @@ func TestMonthlyImportLifecycle(t *testing.T) {
 	h := newMonthlyHarness(t, "2026-08")
 	ctx := context.Background()
 
-	// Nothing is requested before 06:00 on the 1st.
-	expectTime(t, h.step(at("2026-09-01", 5, 0)), at("2026-09-01", 6, 0))
-	if h.fake.count("POST") != 0 {
-		t.Fatal("requested before the run time")
-	}
-
-	// At 06:00 August is requested with a one-hour overlap, transactions only.
+	// At 06:00 on the 1st all of August is requested with a one-hour overlap, transactions only.
 	h.step(at("2026-09-01", 6, 0))
 	if h.fake.count("POST") != 1 {
 		t.Fatalf("posts = %d", h.fake.count("POST"))
@@ -383,7 +406,7 @@ func TestMonthlyImportLifecycle(t *testing.T) {
 	}
 	batch, err := h.store.Queries.GetImportBatch(ctx, job.BatchID.Int64)
 	if err != nil || batch.Status != "committed" || batch.InsertedCount != 3 || batch.RowCount != 4 ||
-		batch.ReviewStatus != "needs_review" || batch.Filename != "trading212-2026-08.csv" {
+		batch.ReviewStatus != "confirmed" || batch.Filename != "trading212-2026-08.csv" {
 		t.Fatalf("batch = %+v, %v", batch, err)
 	}
 	ids := h.externalIDs()
@@ -393,8 +416,8 @@ func TestMonthlyImportLifecycle(t *testing.T) {
 	if first := h.count("SELECT count(*) FROM transactions WHERE external_id = 't212-first' AND local_date = '2026-08-01'"); first != 1 {
 		t.Fatal("the boundary row is not dated 1 August")
 	}
-	if events := h.count("SELECT count(*) FROM notification_events WHERE kind = 'import_review' AND batch_id = ?", batch.ID); events != 1 {
-		t.Fatalf("review events = %d", events)
+	if events := h.count("SELECT count(*) FROM notification_events"); events != 0 {
+		t.Fatalf("events = %d", events)
 	}
 	// Credentials go to the API but never to the download link.
 	h.fake.mu.Lock()
@@ -406,14 +429,16 @@ func TestMonthlyImportLifecycle(t *testing.T) {
 	}
 	h.fake.mu.Unlock()
 
-	// The completed month is not requested again, and next month waits.
-	expectTime(t, h.step(at("2026-09-01", 7, 0)), at("2026-10-01", 6, 0))
+	// The completed month is not requested again, and September waits for
+	// its first daily sync.
+	expectTime(t, h.step(at("2026-09-01", 7, 0)), at("2026-09-02", 6, 0))
 	if h.fake.count("POST") != 1 {
 		t.Fatal("completed month requested again")
 	}
 
 	// A manual rerun requests the month again and skips the existing IDs.
-	h.now = at("2026-09-02", 9, 0)
+	// Its batch added nothing, so it is deleted and the month keeps the first.
+	h.now = at("2026-09-01", 9, 0)
 	started, err := Rerun(ctx, h.store.Queries, h.account, "2026-08", h.now)
 	if err != nil || !started {
 		t.Fatalf("rerun = %v, %v", started, err)
@@ -421,21 +446,203 @@ func TestMonthlyImportLifecycle(t *testing.T) {
 	if again, err := Rerun(ctx, h.store.Queries, h.account, "2026-08", h.now); err != nil || again {
 		t.Fatalf("rerun while open = %v, %v", again, err)
 	}
-	h.step(at("2026-09-02", 9, 0))
-	h.step(at("2026-09-02", 9, 1).Add(time.Second))
+	h.step(at("2026-09-01", 9, 0))
+	h.step(at("2026-09-01", 9, 1).Add(time.Second))
 	job = h.monthJob("2026-08")
 	if job.State != stateCompleted || job.ReportID.String != "102" || h.fake.count("POST") != 2 {
 		t.Fatalf("rerun job = %+v", job)
 	}
-	rerun, err := h.store.Queries.GetImportBatch(ctx, job.BatchID.Int64)
-	if err != nil || rerun.ID == batch.ID || rerun.InsertedCount != 0 || rerun.DuplicateCount != 3 || rerun.ReviewStatus != "not_required" {
-		t.Fatalf("rerun batch = %+v, %v", rerun, err)
+	if job.BatchID.Int64 != batch.ID || h.count("SELECT count(*) FROM import_batches") != 1 {
+		t.Fatalf("rerun job = %+v, batches = %d", job, h.count("SELECT count(*) FROM import_batches"))
 	}
 	if ids := h.externalIDs(); !slices.Equal(ids, []string{"t212-deposit", "t212-first", "t212-last"}) {
 		t.Fatalf("ids after rerun = %v", ids)
 	}
-	if events := h.count("SELECT count(*) FROM notification_events"); events != 1 {
+	if events := h.count("SELECT count(*) FROM notification_events"); events != 0 {
 		t.Fatalf("events after duplicate-only rerun = %d", events)
+	}
+}
+
+// run steps on the worker's own schedule through until and returns the
+// next time it asks for.
+func (h *monthlyHarness) run(from, until time.Time) time.Time {
+	h.t.Helper()
+	now := from
+	for range 100 {
+		if now.After(until) {
+			return now
+		}
+		now = h.step(now)
+	}
+	h.t.Fatal("the worker never stopped")
+	return now
+}
+
+func TestMonthlyImportSyncsDaily(t *testing.T) {
+	h := newMonthlyHarness(t, "2026-08")
+	h.fake.status = integrations.ReportFinished
+	posts := func() []string {
+		h.fake.mu.Lock()
+		defer h.fake.mu.Unlock()
+		ranges := []string{}
+		for _, body := range h.fake.bodies {
+			ranges = append(ranges, fmt.Sprint(body["timeFrom"], " ", body["timeTo"]))
+		}
+		return ranges
+	}
+
+	// August is first synced at 06:00 on the 2nd, through the 1st.
+	expectTime(t, h.step(at("2026-08-02", 5, 0)), at("2026-08-02", 6, 0))
+	if len(posts()) != 0 {
+		t.Fatal("requested before the first run")
+	}
+	expectTime(t, h.run(at("2026-08-02", 6, 0), at("2026-08-02", 7, 0)), at("2026-08-03", 6, 0))
+	job := h.monthJob("2026-08")
+	if job.State != stateCompleted || job.ReportTo.String != "2026-08-01T22:00:00Z" {
+		t.Fatalf("job = %+v", job)
+	}
+	if ids := h.externalIDs(); !slices.Equal(ids, []string{"t212-first"}) {
+		t.Fatalf("ids = %v", ids)
+	}
+	batch, err := h.store.Queries.GetImportBatch(context.Background(), job.BatchID.Int64)
+	if err != nil || batch.ReviewStatus != "confirmed" || h.count("SELECT count(*) FROM notification_events") != 0 {
+		t.Fatalf("batch = %+v, %v", batch, err)
+	}
+
+	// Each day the month is requested again from its start.
+	h.run(at("2026-08-03", 6, 0), at("2026-08-03", 7, 0))
+	if job := h.monthJob("2026-08"); job.State != stateCompleted || job.ReportTo.String != "2026-08-02T22:00:00Z" {
+		t.Fatalf("job = %+v", job)
+	}
+	// Missed days are caught up by the next run.
+	h.run(at("2026-08-06", 6, 0), at("2026-08-06", 7, 0))
+	if ids := h.externalIDs(); !slices.Equal(ids, []string{"t212-deposit", "t212-first"}) {
+		t.Fatalf("ids = %v", ids)
+	}
+
+	// On the 1st the month is synced through its end and then left alone.
+	h.run(at("2026-09-01", 6, 0), at("2026-09-01", 7, 0))
+	if job := h.monthJob("2026-08"); job.State != stateCompleted || job.ReportTo.String != job.PeriodEndUtc.String {
+		t.Fatalf("job = %+v", job)
+	}
+	if ids := h.externalIDs(); !slices.Equal(ids, []string{"t212-deposit", "t212-first", "t212-last"}) {
+		t.Fatalf("ids = %v", ids)
+	}
+	h.run(at("2026-09-02", 6, 0), at("2026-09-03", 7, 0))
+	want := []string{
+		"2026-07-31T21:00:00Z 2026-08-01T23:00:00Z",
+		"2026-07-31T21:00:00Z 2026-08-02T23:00:00Z",
+		"2026-07-31T21:00:00Z 2026-08-05T23:00:00Z",
+		"2026-07-31T21:00:00Z 2026-08-31T23:00:00Z",
+		"2026-08-31T21:00:00Z 2026-09-01T23:00:00Z",
+		"2026-08-31T21:00:00Z 2026-09-02T23:00:00Z",
+	}
+	if got := posts(); !slices.Equal(got, want) {
+		t.Fatalf("requests = %v", got)
+	}
+	if h.count("SELECT count(*) FROM notification_events") != 0 {
+		t.Fatal("a daily sync notified")
+	}
+	// Only the syncs that added transactions keep a batch.
+	if batches := h.count("SELECT count(*) FROM import_batches WHERE inserted_count > 0"); batches != 4 ||
+		h.count("SELECT count(*) FROM import_batches") != 4 {
+		t.Fatalf("batches = %d", h.count("SELECT count(*) FROM import_batches"))
+	}
+	if job := h.monthJob("2026-08"); h.count("SELECT inserted_count FROM import_batches WHERE id = ?", job.BatchID.Int64) != 1 {
+		t.Fatalf("august points at batch %d", job.BatchID.Int64)
+	}
+}
+
+func TestDailySyncSkipsRowsTheOwnerHandled(t *testing.T) {
+	h := newMonthlyHarness(t, "2026-08")
+	ctx := context.Background()
+	h.fake.status = integrations.ReportFinished
+	h.fake.csv = augustReport + "Card debit,2026-08-01 10:00:00,,t212-usd,-5.00,USD,US Shop,RETAIL_STORES\n"
+
+	// A row in another currency stops the first sync for the owner.
+	h.run(at("2026-08-02", 6, 0), at("2026-08-02", 7, 0))
+	job := h.monthJob("2026-08")
+	if job.State != stateFailed || job.LastErrorCode.String != "needs_attention" {
+		t.Fatalf("job = %+v", job)
+	}
+	// The owner excludes it and commits the import, which completes the job.
+	pipeline := imports.New(h.store)
+	var row int64
+	if err := h.store.DB.QueryRow("SELECT row_number FROM staging_rows WHERE batch_id = ? AND raw_record_json LIKE '%t212-usd%'",
+		job.BatchID.Int64).Scan(&row); err != nil {
+		t.Fatal(err)
+	}
+	if err := pipeline.CorrectRow(ctx, job.BatchID.Int64, row, true, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := pipeline.Validate(ctx, job.BatchID.Int64, rates.Location); err != nil {
+		t.Fatal(err)
+	}
+	if err := pipeline.CommitReviewed(ctx, job.BatchID.Int64, rates.Location); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.store.Queries.CompleteJobsForBatch(ctx, job.BatchID); err != nil {
+		t.Fatal(err)
+	}
+
+	// The next day's report still has the row, but the sync leaves it out.
+	h.run(at("2026-08-03", 6, 0), at("2026-08-03", 7, 0))
+	synced := h.monthJob("2026-08")
+	if synced.State != stateCompleted || synced.ReportTo.String != "2026-08-02T22:00:00Z" || synced.BatchID != job.BatchID {
+		t.Fatalf("job = %+v", synced)
+	}
+	if failures := h.count("SELECT count(*) FROM notification_events WHERE kind = 'import_failure'"); failures != 1 {
+		t.Fatalf("failures = %d", failures)
+	}
+	if ids := h.externalIDs(); !slices.Equal(ids, []string{"t212-first"}) {
+		t.Fatalf("ids = %v", ids)
+	}
+}
+
+func TestDailySyncStartsMidMonthAfterUpgrade(t *testing.T) {
+	h := newMonthlyHarness(t, "2026-09")
+	h.fake.status = integrations.ReportFinished
+	h.fake.csv = "Action,Time (UTC),Notes,ID,Total,Currency (Total),Merchant name,Merchant category\n" +
+		"Card debit,2026-09-10 10:00:00,,t212-september,-4.00,EUR,Example Bistro,RESTAURANTS\n" +
+		"Card debit,2026-10-05 10:00:00,,t212-october-5,-6.00,EUR,Example Bistro,RESTAURANTS\n" +
+		"Card debit,2026-10-19 21:30:00,,t212-october-19,-7.00,EUR,Late Shop,RETAIL_STORES\n" +
+		"Card debit,2026-10-20 07:00:00,,t212-october-20,-8.00,EUR,Sample Kiosk,MISCELLANEOUS\n"
+
+	// The monthly version imported September on 1 October, then the upgrade
+	// filled report_to.
+	h.run(at("2026-10-01", 6, 0), at("2026-10-01", 7, 0))
+	migration, err := fs.ReadFile(migrations.Files, "000019_daily_sync.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	backfill := string(migration[strings.Index(string(migration), "UPDATE"):])
+	if _, err := h.store.DB.Exec("UPDATE scheduled_jobs SET report_to = NULL"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.store.DB.Exec(backfill); err != nil {
+		t.Fatal(err)
+	}
+
+	// Deployed on 20 October, the server syncs October through the 19th at
+	// once and then waits for the next morning.
+	h.restart()
+	expectTime(t, h.run(at("2026-10-20", 10, 0), at("2026-10-20", 11, 0)), at("2026-10-21", 6, 0))
+	h.fake.mu.Lock()
+	bodies := slices.Clone(h.fake.bodies)
+	h.fake.mu.Unlock()
+	if len(bodies) != 2 || bodies[1]["timeFrom"] != "2026-09-30T21:00:00Z" || bodies[1]["timeTo"] != "2026-10-19T23:00:00Z" {
+		t.Fatalf("requests = %v", bodies)
+	}
+	if ids := h.externalIDs(); !slices.Equal(ids, []string{"t212-october-19", "t212-october-5", "t212-september"}) {
+		t.Fatalf("ids = %v", ids)
+	}
+	if job := h.monthJob("2026-09"); job.State != stateCompleted || job.ReportTo.String != job.PeriodEndUtc.String {
+		t.Fatalf("september = %+v", job)
+	}
+
+	h.run(at("2026-10-21", 6, 0), at("2026-10-21", 7, 0))
+	if ids := h.externalIDs(); !slices.Contains(ids, "t212-october-20") || len(ids) != 4 {
+		t.Fatalf("ids = %v", ids)
 	}
 }
 

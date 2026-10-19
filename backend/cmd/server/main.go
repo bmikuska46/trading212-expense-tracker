@@ -100,7 +100,7 @@ func run() error {
 
 // tenant wires the jobs of one user's ledger. The rate job fetches once now
 // and then daily at 18:00 Europe/Bratislava. The monthly import job requests
-// Trading 212 reports at 06:00 on the 1st, the notification job emails import
+// Trading 212 reports at 06:00 every day, the notification job emails import
 // events, the investing job snapshots the Trading 212 portfolio hourly, and
 // the income job imports dividends, interest, and cashback with the NBS rates
 // to convert them. TypeSafe and Resend settings come from the main database.

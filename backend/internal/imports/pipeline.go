@@ -838,21 +838,42 @@ func sameSource(original dbgen.ImportedOriginal, record Record) bool {
 		original.MerchantName == record.Payee && original.MerchantCategory == record.Category && original.Notes == record.Notes
 }
 
+// commitMode is who looked at a batch before it is committed, which decides
+// whether the batch still waits for the owner's confirmation.
+type commitMode int
+
+const (
+	// commitForReview leaves new transactions for review with a notification.
+	commitForReview commitMode = iota
+	// commitReviewed confirms the batch the owner reviewed in the app, unless
+	// Jev picked categories, which the owner then checks.
+	commitReviewed
+	// commitConfirmed confirms an automatic Trading 212 sync right away.
+	commitConfirmed
+)
+
 // Commit promotes every valid row to the ledger in one transaction, with
 // the payees and categories they need. Rows are classified again inside the
 // transaction; if any result differs from validation, nothing is written.
+// New transactions wait for review.
 func (p *Pipeline) Commit(ctx context.Context, batchID int64, location *time.Location) error {
-	return p.commit(ctx, batchID, location, false)
+	return p.commit(ctx, batchID, location, commitForReview)
 }
 
 // CommitReviewed imports rows the owner has reviewed and confirms the batch
 // in the same transaction, without creating a review notification. When Jev
 // picked categories, the batch waits for the owner to check them instead.
 func (p *Pipeline) CommitReviewed(ctx context.Context, batchID int64, location *time.Location) error {
-	return p.commit(ctx, batchID, location, true)
+	return p.commit(ctx, batchID, location, commitReviewed)
 }
 
-func (p *Pipeline) commit(ctx context.Context, batchID int64, location *time.Location, reviewed bool) error {
+// CommitConfirmed imports an automatic sync and confirms the batch in the
+// same transaction, so its transactions need no review.
+func (p *Pipeline) CommitConfirmed(ctx context.Context, batchID int64, location *time.Location) error {
+	return p.commit(ctx, batchID, location, commitConfirmed)
+}
+
+func (p *Pipeline) commit(ctx context.Context, batchID int64, location *time.Location, mode commitMode) error {
 	if err := p.lock(); err != nil {
 		return err
 	}
@@ -928,14 +949,14 @@ func (p *Pipeline) commit(ctx context.Context, batchID int64, location *time.Loc
 		if err := q.CommitBatch(ctx, dbgen.CommitBatchParams{InsertedCount: int64(inserted), ID: batchID}); err != nil {
 			return err
 		}
-		if reviewed && inserted > 0 && suggested == 0 {
+		if confirm := mode == commitConfirmed || (mode == commitReviewed && suggested == 0); confirm && inserted > 0 {
 			if _, err := q.ConfirmBatch(ctx, dbgen.ConfirmBatchParams{
 				ConfirmedAt: sql.NullString{String: p.Now().UTC().Format(time.RFC3339), Valid: true}, ID: batchID,
 			}); err != nil {
 				return err
 			}
 		}
-		return finishCommit(ctx, q, batch, int64(inserted), p.Now(), reviewed)
+		return finishCommit(ctx, q, batch, int64(inserted), p.Now(), mode == commitForReview)
 	})
 	if errors.Is(err, errChanged) {
 		if refresh := p.validate(ctx, batchID, location); refresh != nil {
@@ -948,8 +969,8 @@ func (p *Pipeline) commit(ctx context.Context, batchID int64, location *time.Loc
 // finishCommit records the review notification in the commit transaction
 // and completes a scheduled job waiting for this batch, dismissing its
 // failure notification.
-func finishCommit(ctx context.Context, q txn, batch dbgen.ImportBatch, inserted int64, now time.Time, reviewed bool) error {
-	if inserted > 0 && !reviewed {
+func finishCommit(ctx context.Context, q txn, batch dbgen.ImportBatch, inserted int64, now time.Time, forReview bool) error {
+	if inserted > 0 && forReview {
 		if err := notify.CreateReview(ctx, q.Queries, batch, inserted, now); err != nil {
 			return err
 		}

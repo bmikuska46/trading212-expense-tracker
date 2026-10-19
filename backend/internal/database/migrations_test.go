@@ -184,7 +184,8 @@ func TestTypeSafeMigrationDropsTheOpenAIKey(t *testing.T) {
 		"DROP TABLE sessions", "DROP TABLE users", `CREATE TABLE sessions (token_hash BLOB PRIMARY KEY, owner_id INTEGER NOT NULL REFERENCES owner(id),
 			created_at TEXT NOT NULL, expires_at TEXT NOT NULL) STRICT`,
 		"ALTER TABLE owner DROP COLUMN dividend_tax_percent", "ALTER TABLE owner DROP COLUMN interest_tax_percent",
-		"ALTER TABLE owner DROP COLUMN cashback_tax_percent", "DELETE FROM schema_migrations WHERE version >= 11"} {
+		"ALTER TABLE owner DROP COLUMN cashback_tax_percent", "ALTER TABLE scheduled_jobs DROP COLUMN report_to",
+		"DELETE FROM schema_migrations WHERE version >= 11"} {
 		if _, err := tx.Exec(statement); err != nil {
 			t.Fatal(err)
 		}

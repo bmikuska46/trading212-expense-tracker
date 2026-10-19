@@ -207,7 +207,7 @@
     "imported": "{count, plural, one {Imported # transaction.} other {Imported # transactions.}}",
     "back": "All imports",
     "loading": "Loading import",
-    "scheduled": "Monthly Trading 212 report for {month}, into {account}. Downloaded <date>{created}</date>",
+    "scheduled": "Trading 212 report for {month}, into {account}. Downloaded <date>{created}</date>",
     "uploaded": "Into {account}. Uploaded <date>{created}</date>",
     "committedOn": ", imported <date>{committed}</date>",
     "checking": "Checking rows",

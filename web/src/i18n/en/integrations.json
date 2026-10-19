@@ -28,7 +28,7 @@
   "apiSecret": "API secret",
   "enterApiSecret": "Enter the API secret.",
   "trading212": {
-    "description": "Imports card spending from monthly history reports, tracks your portfolio on the Investing page every hour, and imports dividends, interest and cashback. Create an API key in Trading 212 with the Account data, History and Pies read permissions. Only the parts you choose below are read.",
+    "description": "Imports card spending from daily history reports, tracks your portfolio on the Investing page every hour, and imports dividends, interest and cashback. Create an API key in Trading 212 with the Account data, History and Pies read permissions. Only the parts you choose below are read.",
     "period": "Automatic imports cover {period} onward.",
     "environment": "Environment",
     "live": "Live account",
@@ -36,7 +36,7 @@
     "accountName": "Account name",
     "accountNameHint": "Name of the account that receives imported activity.",
     "enabled": "Card transactions",
-    "enabledHint": "Imported every month, starting with the current month. Earlier months are never requested automatically.",
+    "enabledHint": "Imported every day, starting with the current month. Earlier months are never requested automatically.",
     "sync": "What to sync",
     "syncParts": {
       "portfolio": "Account summary",

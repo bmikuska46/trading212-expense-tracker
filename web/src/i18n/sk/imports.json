@@ -207,7 +207,7 @@
     "imported": "{count, plural, one {Importovaná # transakcia.} few {Importované # transakcie.} other {Importovaných # transakcií.}}",
     "back": "Všetky importy",
     "loading": "Načítavam import",
-    "scheduled": "Mesačný výpis z Trading 212 za obdobie {month}, účet {account}. Stiahnuté <date>{created}</date>",
+    "scheduled": "Výpis z Trading 212 za obdobie {month}, účet {account}. Stiahnuté <date>{created}</date>",
     "uploaded": "Účet {account}. Nahrané <date>{created}</date>",
     "committedOn": ", importované <date>{committed}</date>",
     "checking": "Kontrolujem riadky",

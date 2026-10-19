@@ -18,6 +18,13 @@ SELECT * FROM scheduled_jobs
 WHERE kind = 'monthly_import' AND source_account_id = ? AND state NOT IN ('completed', 'failed', 'canceled')
 ORDER BY period_key LIMIT 1;
 
+-- Completed months that are not imported through their end yet are synced
+-- again every day.
+-- name: ListPartialMonthlyJobs :many
+SELECT * FROM scheduled_jobs
+WHERE kind = 'monthly_import' AND source_account_id = ? AND period_key >= ? AND state = 'completed' AND
+    (report_to IS NULL OR report_to < period_end_utc);
+
 -- name: ListMonthlyJobs :many
 SELECT * FROM scheduled_jobs WHERE kind = 'monthly_import' ORDER BY period_key DESC, id DESC LIMIT sqlc.arg(page_size);
 
@@ -31,8 +38,8 @@ WHERE kind = 'monthly_import' AND state NOT IN ('completed', 'failed', 'canceled
 RETURNING id;
 
 -- name: SaveMonthlyJob :exec
-UPDATE scheduled_jobs SET state = ?, report_id = ?, report_status = ?, report_requested_at = ?, batch_id = ?,
-    retry_count = ?, next_attempt_at = ?, last_error_code = ?, last_error_detail = ?,
+UPDATE scheduled_jobs SET state = ?, report_id = ?, report_status = ?, report_requested_at = ?, report_to = ?,
+    batch_id = ?, retry_count = ?, next_attempt_at = ?, last_error_code = ?, last_error_detail = ?,
     updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 WHERE id = ?;
 
@@ -61,7 +68,7 @@ SELECT CAST(coalesce(max(called_at), '') AS TEXT) AS started_at FROM (
 
 -- name: RerunMonthlyJob :execrows
 UPDATE scheduled_jobs SET state = 'pending', report_id = NULL, report_status = NULL, report_requested_at = NULL,
-    batch_id = NULL, retry_count = 0,
+    report_to = NULL, batch_id = NULL, retry_count = 0,
     next_attempt_at = ?, last_error_code = NULL, last_error_detail = NULL, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 WHERE id = ? AND state IN ('completed', 'failed', 'canceled');
 
@@ -86,3 +93,25 @@ UPDATE scheduled_jobs SET batch_id = NULL, updated_at = strftime('%Y-%m-%dT%H:%M
 
 -- name: DetachFailureBatch :exec
 UPDATE notification_events SET batch_id = NULL WHERE batch_id = ? AND kind = 'import_failure' AND job_id IS NOT NULL;
+
+-- The newest batch of a month's report that added transactions.
+-- name: PreviousMonthlyBatch :one
+SELECT id FROM import_batches
+WHERE source_account_id = ? AND filename = ? AND status = 'committed' AND inserted_count > 0
+ORDER BY id DESC LIMIT 1;
+
+-- name: DeleteEmptyBatch :execrows
+DELETE FROM import_batches WHERE import_batches.id = ? AND status = 'committed' AND inserted_count = 0
+AND NOT EXISTS (SELECT 1 FROM transactions WHERE transactions.import_batch_id = import_batches.id)
+AND NOT EXISTS (SELECT 1 FROM source_conflicts WHERE source_conflicts.batch_id = import_batches.id)
+AND NOT EXISTS (SELECT 1 FROM scheduled_jobs WHERE scheduled_jobs.batch_id = import_batches.id)
+AND NOT EXISTS (SELECT 1 FROM notification_events WHERE notification_events.batch_id = import_batches.id);
+
+-- Rows the owner excluded or corrected in a committed import into the account.
+-- Daily syncs request the month from its start, so they leave these out
+-- instead of asking about them again.
+-- name: HandledReportRows :many
+SELECT DISTINCT staging_rows.raw_record_json FROM staging_rows
+JOIN import_batches ON import_batches.id = staging_rows.batch_id
+WHERE import_batches.source_account_id = ? AND import_batches.status = 'committed' AND
+    (staging_rows.excluded_by_owner = 1 OR staging_rows.corrected_record_json IS NOT NULL);

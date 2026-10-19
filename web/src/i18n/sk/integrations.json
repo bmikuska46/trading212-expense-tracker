@@ -28,7 +28,7 @@
   "apiSecret": "Tajný API kľúč",
   "enterApiSecret": "Zadajte tajný API kľúč.",
   "trading212": {
-    "description": "Importuje platby kartou z mesačných výpisov histórie, každú hodinu zaznamenáva vaše portfólio na stránke Investície a importuje dividendy, úroky a cashback. V Trading 212 vytvorte API kľúč s oprávneniami na čítanie Account data, History a Pies. Načítajú sa len časti, ktoré vyberiete nižšie.",
+    "description": "Importuje platby kartou z denných výpisov histórie, každú hodinu zaznamenáva vaše portfólio na stránke Investície a importuje dividendy, úroky a cashback. V Trading 212 vytvorte API kľúč s oprávneniami na čítanie Account data, History a Pies. Načítajú sa len časti, ktoré vyberiete nižšie.",
     "period": "Automatické importy začínajú obdobím {period}.",
     "environment": "Prostredie",
     "live": "Reálny účet",
@@ -36,7 +36,7 @@
     "accountName": "Názov účtu",
     "accountNameHint": "Účet, do ktorého sa budú importovať pohyby.",
     "enabled": "Transakcie kartou",
-    "enabledHint": "Importujú sa každý mesiac, počnúc aktuálnym mesiacom. Staršie mesiace sa automaticky nikdy nevyžiadajú.",
+    "enabledHint": "Importujú sa každý deň, počnúc aktuálnym mesiacom. Staršie mesiace sa automaticky nikdy nevyžiadajú.",
     "sync": "Čo synchronizovať",
     "syncParts": {
       "portfolio": "Prehľad účtu",
