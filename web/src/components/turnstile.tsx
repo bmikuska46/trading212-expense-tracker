@@ -27,9 +27,7 @@ declare global {
   }
 }
 
-const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
-
-export function Turnstile({ onTokenChange }: { onTokenChange: (token: string) => void }) {
+export function Turnstile({ siteKey, onTokenChange }: { siteKey: string; onTokenChange: (token: string) => void }) {
   const t = useTranslations("auth");
   const locale = useLocale();
   const { resolved } = useTheme();
@@ -64,7 +62,7 @@ export function Turnstile({ onTokenChange }: { onTokenChange: (token: string) =>
     } catch {
       fail();
     }
-  }, [fail, locale, onTokenChange, resolved]);
+  }, [fail, locale, onTokenChange, resolved, siteKey]);
 
   const attach = useCallback((node: HTMLDivElement) => {
     container.current = node;

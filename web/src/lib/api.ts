@@ -11,6 +11,7 @@ const runtimeSchema = z.object({
 const userSchema = z.object({ email: z.string(), timezone: z.string(), owner: z.boolean(), mustChangePassword: z.boolean() });
 
 const sessionSchema = z.object({
+  turnstileSiteKey: z.string(),
   setupRequired: z.boolean().default(false),
   authenticated: z.boolean(),
   user: userSchema.nullable(),

@@ -38,6 +38,18 @@ func TestSettingsRemainServerSideAndKeyStaysOutsideData(t *testing.T) {
 	}
 }
 
+func TestTurnstileRuntimeKeys(t *testing.T) {
+	t.Setenv("APP_TURNSTILE_SITE_KEY", "  configured-runtime-site-key\n")
+	t.Setenv("APP_TURNSTILE_SECRET_KEY", "\tconfigured-runtime-secret  ")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.TurnstileSiteKey != "configured-runtime-site-key" || cfg.TurnstileSecretKey != "configured-runtime-secret" {
+		t.Fatal("runtime Turnstile keys were not loaded and trimmed")
+	}
+}
+
 func TestTrustedProxyCIDRs(t *testing.T) {
 	t.Setenv("APP_LISTEN_ADDR", "127.0.0.1:8080")
 	t.Setenv("APP_COOKIE_SECURE", "auto")

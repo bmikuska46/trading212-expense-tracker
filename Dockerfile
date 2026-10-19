@@ -1,7 +1,5 @@
 # syntax=docker/dockerfile:1
 FROM node:24.21.0-bookworm-slim AS frontend
-ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
-ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm install -g pnpm@11.20.0
 WORKDIR /src/web
@@ -9,7 +7,7 @@ COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY web/next.config.ts web/tsconfig.json web/postcss.config.mjs web/eslint.config.mjs web/components.json ./
 COPY web/src/ ./src/
-RUN test -n "$NEXT_PUBLIC_TURNSTILE_SITE_KEY" && pnpm lint && pnpm build && pnpm typecheck
+RUN pnpm lint && pnpm build && pnpm typecheck
 
 FROM golang:1.26.5-bookworm AS backend
 RUN apt-get update && apt-get install -y --no-install-recommends tcl libssl-dev sqlite3 \

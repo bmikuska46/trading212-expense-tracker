@@ -14,6 +14,7 @@ type Config struct {
 	DatabasePath       string
 	KeyFile            string
 	WebDirectory       string
+	TurnstileSiteKey   string
 	TurnstileSecretKey string
 	TrustedProxies     []netip.Prefix
 	// CookieSecure is "auto", "always", or "never". Auto marks the session
@@ -29,6 +30,7 @@ func Load() (Config, error) {
 		KeyFile:            value("APP_DATABASE_KEY_FILE", ".local/secrets/database.key"),
 		WebDirectory:       value("APP_WEB_DIR", "web/out"),
 		CookieSecure:       value("APP_COOKIE_SECURE", "auto"),
+		TurnstileSiteKey:   strings.TrimSpace(os.Getenv("APP_TURNSTILE_SITE_KEY")),
 		TurnstileSecretKey: strings.TrimSpace(os.Getenv("APP_TURNSTILE_SECRET_KEY")),
 	}
 	if proxies := strings.TrimSpace(os.Getenv("APP_TRUSTED_PROXY_CIDRS")); proxies != "" {

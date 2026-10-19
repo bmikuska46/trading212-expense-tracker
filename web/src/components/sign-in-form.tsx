@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { useDocumentTitle } from "@/components/locale";
 import { signIn } from "@/lib/api";
 import { showServerErrors } from "@/lib/forms";
-import { useSetSession } from "@/lib/session";
+import { useSession, useSetSession } from "@/lib/session";
 import { alertClass, alertDescriptionClass, footerClass, legendClass } from "@/components/panel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ export function SignInForm() {
   const app = useTranslations("app");
   useDocumentTitle(app("pages.login"));
   const setSession = useSetSession();
+  const session = useSession();
   const [message, setMessage] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [challenge, setChallenge] = useState(0);
@@ -40,6 +41,7 @@ export function SignInForm() {
       setMessage(showServerErrors(error, form.setError, ["email", "password"]));
     },
   });
+  if (!session.data) return null;
   return <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
     <div className="flex flex-col gap-1">
       <p className={legendClass}>{t("workspace")}</p>
@@ -73,7 +75,7 @@ export function SignInForm() {
               {errors.password && <FieldError id="password-error" className="text-xs">{errors.password.message}</FieldError>}
             </Field>
           </FieldGroup>
-          <Turnstile key={challenge} onTokenChange={setTurnstileToken} />
+          <Turnstile key={challenge} siteKey={session.data.turnstileSiteKey} onTokenChange={setTurnstileToken} />
           <Button type="submit" disabled={mutation.isPending || !turnstileToken}>
             {mutation.isPending ? t("signingIn") : t("signIn")}
             <Kbd aria-hidden="true" className="border-primary-foreground/20 bg-primary-foreground/10 text-primary-foreground max-md:hidden">Enter</Kbd>

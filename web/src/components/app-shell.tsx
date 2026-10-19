@@ -229,6 +229,7 @@ function Workspace({ current, email, children }: { current: string; email: strin
   const t = useTranslations("shell");
   const router = useRouter();
   const setSession = useSetSession();
+  const session = useSession();
   const reviewCount = useReviewCount();
   const [notice, setNotice] = useState({ text: "", error: false });
   const [commandOpen, setCommandOpen] = useState(false);
@@ -236,7 +237,9 @@ function Workspace({ current, email, children }: { current: string; email: strin
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   const leave = useMutation({
     mutationFn: signOut,
-    onSuccess: () => setSession({ setupRequired: false, authenticated: false, user: null }),
+    onSuccess: () => {
+      if (session.data) setSession({ ...session.data, setupRequired: false, authenticated: false, user: null });
+    },
   });
   // The register owns the transaction editor, so recording activity from
   // anywhere opens it there. On the register itself the filters are kept.

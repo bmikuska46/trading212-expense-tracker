@@ -266,6 +266,7 @@ def run(args):
         environment.update(APP_LISTEN_ADDR=f"127.0.0.1:{args.port}", APP_DATABASE_PATH=str(DATABASE),
                            APP_DATABASE_KEY_FILE=str(KEY), APP_WEB_DIR=str(ROOT / "web" / "out"),
                            APP_COOKIE_SECURE="never", APP_TRUSTED_PROXY_CIDRS="",
+                           APP_TURNSTILE_SITE_KEY="1x00000000000000000000AA",
                            APP_TURNSTILE_SECRET_KEY="1x0000000000000000000000000000000AA")
         log_fd = os.open(DEMO / "server.log", os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600)
         with os.fdopen(log_fd, "a") as log:

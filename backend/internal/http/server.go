@@ -29,11 +29,12 @@ type Status struct {
 
 type Options struct {
 	// CookieSecure is "auto", "always", or "never"; see config.Config.
-	CookieSecure   string
-	Integrations   *integrations.Client
-	Now            func() time.Time
-	Turnstile      *auth.Turnstile
-	TrustedProxies []netip.Prefix
+	CookieSecure     string
+	Integrations     *integrations.Client
+	Now              func() time.Time
+	Turnstile        *auth.Turnstile
+	TurnstileSiteKey string
+	TrustedProxies   []netip.Prefix
 	// ImportCommitHook runs after each row a commit inserts; tests use it to
 	// interrupt the final transaction.
 	ImportCommitHook func(inserted int) error
@@ -55,19 +56,20 @@ type api struct {
 	// store is the ledger of the signed-in user, and main the database with
 	// sign-ins and the settings all users share. They are the same for the
 	// owner and outside of a request.
-	store          *database.Store
-	main           *database.Store
-	tenants        *tenants.Registry
-	cookieSecure   string
-	integrations   *integrations.Client
-	imports        *imports.Pipeline
-	wakeMonthly    func()
-	wakeInvesting  func()
-	now            func() time.Time
-	throttle       *auth.Throttle
-	turnstile      *auth.Turnstile
-	loginLimiter   *auth.LoginLimiter
-	trustedProxies []netip.Prefix
+	store            *database.Store
+	main             *database.Store
+	tenants          *tenants.Registry
+	cookieSecure     string
+	integrations     *integrations.Client
+	imports          *imports.Pipeline
+	wakeMonthly      func()
+	wakeInvesting    func()
+	now              func() time.Time
+	throttle         *auth.Throttle
+	turnstile        *auth.Turnstile
+	turnstileSiteKey string
+	loginLimiter     *auth.LoginLimiter
+	trustedProxies   []netip.Prefix
 }
 
 func New(store *database.Store, webDirectory string, options Options) (http.Handler, error) {
@@ -76,7 +78,7 @@ func New(store *database.Store, webDirectory string, options Options) (http.Hand
 		return nil, err
 	}
 	a := &api{store: store, main: store, cookieSecure: options.CookieSecure, integrations: options.Integrations, now: options.Now,
-		throttle: &auth.Throttle{}, turnstile: options.Turnstile,
+		throttle: &auth.Throttle{}, turnstile: options.Turnstile, turnstileSiteKey: options.TurnstileSiteKey,
 		loginLimiter: auth.NewLoginLimiter(), trustedProxies: options.TrustedProxies}
 	if a.cookieSecure == "" {
 		a.cookieSecure = "auto"

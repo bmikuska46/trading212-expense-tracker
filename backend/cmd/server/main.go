@@ -47,6 +47,9 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	if cfg.TurnstileSiteKey == "" {
+		return errors.New("APP_TURNSTILE_SITE_KEY is required")
+	}
 	if cfg.TurnstileSecretKey == "" {
 		return errors.New("APP_TURNSTILE_SECRET_KEY is required")
 	}
@@ -69,7 +72,8 @@ func run() error {
 	}
 	defer users.Close()
 	handler, err := httpserver.New(store, cfg.WebDirectory, httpserver.Options{CookieSecure: cfg.CookieSecure,
-		Integrations: client, Tenants: users, Turnstile: auth.NewTurnstile(cfg.TurnstileSecretKey), TrustedProxies: cfg.TrustedProxies})
+		Integrations: client, Tenants: users, TurnstileSiteKey: cfg.TurnstileSiteKey,
+		Turnstile: auth.NewTurnstile(cfg.TurnstileSecretKey), TrustedProxies: cfg.TrustedProxies})
 	if err != nil {
 		return errors.New("static frontend is missing; build web first")
 	}

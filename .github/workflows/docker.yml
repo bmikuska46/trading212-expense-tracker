@@ -57,8 +57,6 @@ jobs:
         with:
           context: .
           target: runtime
-          build-args: |
-            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ vars.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
           platforms: linux/amd64
           push: true
           provenance: false

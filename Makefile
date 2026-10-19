@@ -31,7 +31,6 @@ run:
 dev:
 	./scripts/dev.sh
 
-demo: export NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
 demo: build
 	./scripts/demo.py
 

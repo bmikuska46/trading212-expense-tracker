@@ -10,6 +10,52 @@ import (
 	"budget-tracking/backend/internal/auth"
 )
 
+func TestSessionLifecycleExposesRuntimeTurnstileSiteKey(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil || r.Form.Get("secret") != syntheticSecret {
+			t.Error("missing server secret in verification request")
+		}
+		w.Write([]byte(`{"success":true,"action":"login"}`))
+	}))
+	defer upstream.Close()
+	verifier := auth.NewTurnstile(syntheticSecret)
+	verifier.Endpoint = upstream.URL
+	app := newTestApp(t, Options{TurnstileSiteKey: "runtime-site-key", Turnstile: verifier})
+	check := func(response *httptest.ResponseRecorder, status int, setup, authenticated bool) {
+		t.Helper()
+		assertNoSecrets(t, response)
+		if response.Code != status {
+			t.Fatalf("session response: %d %s", response.Code, response.Body)
+		}
+		view := decode[sessionView](t, response)
+		if view.TurnstileSiteKey != app.options.TurnstileSiteKey || view.SetupRequired != setup || view.Authenticated != authenticated {
+			t.Fatalf("session configuration or state lost: %+v", view)
+		}
+		if strings.Contains(response.Body.String(), "turnstileSecretKey") {
+			t.Fatal("session response included the secret key field")
+		}
+	}
+	check(app.request("GET", "/api/session", nil, nil), http.StatusOK, true, false)
+	created := app.request("POST", "/api/setup", map[string]string{"email": ownerEmail, "password": ownerPassword}, nil)
+	check(created, http.StatusCreated, false, true)
+	cookie := sessionCookie(t, created)
+	check(app.request("GET", "/api/session", nil, cookie), http.StatusOK, false, true)
+	const newPassword = "replacement owner password"
+	changed := app.request("POST", "/api/password", map[string]string{"currentPassword": ownerPassword, "newPassword": newPassword}, cookie)
+	check(changed, http.StatusOK, false, true)
+	if response := app.request("DELETE", "/api/session", nil, cookie); response.Code != http.StatusNoContent {
+		t.Fatalf("sign out: %d", response.Code)
+	}
+	check(app.request("GET", "/api/session", nil, cookie), http.StatusOK, false, false)
+	signedIn := app.request("POST", "/api/session", map[string]string{"email": ownerEmail, "password": newPassword, "turnstileToken": "valid-token"}, nil)
+	check(signedIn, http.StatusOK, false, true)
+	cookie = sessionCookie(t, signedIn)
+	app.options.TurnstileSiteKey = "replacement-runtime-site-key"
+	app.restart()
+	check(app.request("GET", "/api/session", nil, nil), http.StatusOK, false, false)
+	check(app.request("GET", "/api/session", nil, cookie), http.StatusOK, false, true)
+}
+
 func TestSignInRequiresFreshTurnstileVerification(t *testing.T) {
 	used := map[string]bool{}
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

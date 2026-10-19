@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { useDocumentTitle } from "@/components/locale";
 import { changePassword, signOut, type Session } from "@/lib/api";
-import { useSetSession } from "@/lib/session";
+import { useSession, useSetSession } from "@/lib/session";
 import { showServerErrors } from "@/lib/forms";
 import { alertClass, alertDescriptionClass, compactFields, footerClass, legendClass, PanelHeader } from "@/components/panel";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -86,7 +86,13 @@ export function ChangePasswordPage() {
   const shell = useTranslations("shell");
   const client = useQueryClient();
   const setSession = useSetSession();
-  const leave = useMutation({ mutationFn: signOut, onSuccess: () => setSession({ setupRequired: false, authenticated: false, user: null }) });
+  const session = useSession();
+  const leave = useMutation({
+    mutationFn: signOut,
+    onSuccess: () => {
+      if (session.data) setSession({ ...session.data, setupRequired: false, authenticated: false, user: null });
+    },
+  });
   return <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
     <div className="flex flex-col gap-1">
       <p className={legendClass}>{t("firstSignIn")}</p>

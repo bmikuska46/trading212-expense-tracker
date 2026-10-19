@@ -36,7 +36,7 @@ Open <http://127.0.0.1:8088> and sign in with the public demo credentials `demo@
 
 The demo creates an encrypted database under `.local/demo` with twelve months of fictional EUR transactions across everyday, savings, and cash accounts. It includes recurring subscriptions, account transfers, a linked refund, and a split expense. Repeated launches reuse the same data. Your normal database and key are separate.
 
-`make demo` builds the frontend with Cloudflare's public test widget and starts the demo on loopback. Sign-in requires internet access for Cloudflare verification. Press **Ctrl+C** to stop it.
+`make demo` builds the app and starts the demo on loopback with Cloudflare's public test keys supplied to the server. Sign-in requires internet access for Cloudflare verification. Press **Ctrl+C** to stop it.
 
 ## Connect Trading 212
 
@@ -128,13 +128,15 @@ From the repository root, run:
 ```sh
 make install
 make key
-export NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+export APP_TURNSTILE_SITE_KEY=1x00000000000000000000AA
 export APP_TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 make build
 make run
 ```
 
 Open <http://127.0.0.1:8080> and create the owner account. The exported keys are [Cloudflare's public test keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) for local development. Use your own Turnstile widget and secret in production.
+
+The server requires both `APP_TURNSTILE_SITE_KEY` and `APP_TURNSTILE_SECRET_KEY` at startup. The frontend reads the public site key from `/api/session`. Builds require neither key. The secret stays on the server for verification.
 
 Run `make dev` for frontend hot reload and automatic backend rebuilds, then open <http://localhost:3000>. `WEB_PORT` changes the frontend port and `APP_LISTEN_ADDR` changes the API address. Local Go builds use `scripts/go.sh` to link SQLCipher instead of ordinary SQLite.
 
@@ -158,7 +160,20 @@ make smoke
 docker compose -f deploy/compose.yaml logs app
 ```
 
-The site key is public and embedded in the frontend at build time. The server secret is supplied at runtime and is never embedded in newly built images. Changing the site key requires a rebuild.
+Both Turnstile keys are runtime environment variables. To change them, update `.env` and recreate the container with `docker compose --env-file .env -f deploy/compose.yaml up -d --no-build app`. The existing image works with the new keys without a rebuild.
+
+To build and run the runtime image directly, export both keys as shown above, then run:
+
+```sh
+docker build --target runtime -t spend212:local .
+docker run --rm -p 127.0.0.1:8080:8080 \
+  -e APP_TURNSTILE_SITE_KEY -e APP_TURNSTILE_SECRET_KEY \
+  -v budget_data:/data \
+  -v "$PWD/.local/secrets/database.key:/run/secrets/database_key:ro" \
+  spend212:local
+```
+
+The [prebuilt-image Compose file](deploy/compose.coolify.yaml) also requires both runtime keys. Set `APP_IMAGE` to the published image name and `APP_DATABASE_KEY` to your database encryption key before starting it.
 
 The [local Compose file](deploy/compose.yaml) binds to `127.0.0.1:8080`, stores databases in the `budget_data` volume, and mounts the encryption key separately. Back up the database and its original key. `make key` refuses to overwrite an existing key.
 

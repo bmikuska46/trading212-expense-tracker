@@ -48,9 +48,10 @@ type userView struct {
 }
 
 type sessionView struct {
-	SetupRequired bool      `json:"setupRequired"`
-	Authenticated bool      `json:"authenticated"`
-	User          *userView `json:"user"`
+	TurnstileSiteKey string    `json:"turnstileSiteKey"`
+	SetupRequired    bool      `json:"setupRequired"`
+	Authenticated    bool      `json:"authenticated"`
+	User             *userView `json:"user"`
 }
 
 // decodeJSON reads one bounded JSON object and rejects unknown fields.
@@ -234,7 +235,7 @@ func (a *api) getSession(w http.ResponseWriter, r *http.Request) {
 		internalError(w, "load owner")
 		return
 	}
-	view := sessionView{SetupRequired: !exists}
+	view := sessionView{SetupRequired: !exists, TurnstileSiteKey: a.turnstileSiteKey}
 	if exists {
 		current, err := a.currentSession(w, r)
 		if err != nil {
@@ -336,7 +337,8 @@ func (a *api) setup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.setSessionCookie(w, r, token, expires)
-	writeJSON(w, http.StatusCreated, sessionView{Authenticated: true, User: &userView{Email: email, Timezone: input.Timezone, Owner: true}})
+	writeJSON(w, http.StatusCreated, sessionView{TurnstileSiteKey: a.turnstileSiteKey, Authenticated: true,
+		User: &userView{Email: email, Timezone: input.Timezone, Owner: true}})
 }
 
 func loginRateLimited(w http.ResponseWriter, wait time.Duration) {
@@ -424,7 +426,7 @@ func (a *api) signIn(w http.ResponseWriter, r *http.Request) {
 		internalError(w, "load timezone")
 		return
 	}
-	writeJSON(w, http.StatusOK, sessionView{Authenticated: true, User: &userView{Email: user.Email, Timezone: timezone,
+	writeJSON(w, http.StatusOK, sessionView{TurnstileSiteKey: a.turnstileSiteKey, Authenticated: true, User: &userView{Email: user.Email, Timezone: timezone,
 		Owner: user.ID == tenants.OwnerID, MustChangePassword: user.MustChangePassword == 1}})
 }
 

@@ -99,7 +99,7 @@ func (a *api) changePassword(w http.ResponseWriter, r *http.Request, current *se
 		return
 	}
 	current.mustChangePassword = false
-	writeJSON(w, http.StatusOK, sessionView{Authenticated: true, User: current.view()})
+	writeJSON(w, http.StatusOK, sessionView{TurnstileSiteKey: a.turnstileSiteKey, Authenticated: true, User: current.view()})
 }
 
 func (a *api) listUsers(w http.ResponseWriter, r *http.Request, _ *session) {
