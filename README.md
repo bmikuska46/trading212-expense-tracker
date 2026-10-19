@@ -138,6 +138,8 @@ Open <http://127.0.0.1:8080> and create the owner account. The exported keys are
 
 The server requires both `APP_TURNSTILE_SITE_KEY` and `APP_TURNSTILE_SECRET_KEY` at startup. The frontend reads the public site key from `/api/session`. Builds require neither key. The secret stays on the server for verification.
 
+For existing deployments, rename `NEXT_PUBLIC_TURNSTILE_SITE_KEY` to `APP_TURNSTILE_SITE_KEY` in your environment configuration. Keep the same value.
+
 Run `make dev` for frontend hot reload and automatic backend rebuilds, then open <http://localhost:3000>. `WEB_PORT` changes the frontend port and `APP_LISTEN_ADDR` changes the API address. Local Go builds use `scripts/go.sh` to link SQLCipher instead of ordinary SQLite.
 
 ## Check changes
@@ -161,6 +163,8 @@ docker compose -f deploy/compose.yaml logs app
 ```
 
 Both Turnstile keys are runtime environment variables. To change them, update `.env` and recreate the container with `docker compose --env-file .env -f deploy/compose.yaml up -d --no-build app`. The existing image works with the new keys without a rebuild.
+
+`make docker-build` builds the image without requiring either key or a `.env` file. Compose validates runtime settings even for its build command, so this target calls Docker directly.
 
 To build and run the runtime image directly, export both keys as shown above, then run:
 

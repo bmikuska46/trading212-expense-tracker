@@ -35,7 +35,7 @@ demo: build
 	./scripts/demo.py
 
 docker-build:
-	docker compose $(if $(wildcard .env),--env-file .env) -f deploy/compose.yaml build app
+	docker build --target runtime -t spend212:local .
 
 docker-up:
 	docker compose $(if $(wildcard .env),--env-file .env) -f deploy/compose.yaml up -d --build
