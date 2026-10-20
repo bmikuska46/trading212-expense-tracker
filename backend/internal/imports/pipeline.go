@@ -100,9 +100,13 @@ type Pipeline struct {
 	// Settings holds the TypeSafe key, which all users share. Nil means the
 	// pipeline's own store.
 	Settings *database.Store
+	// Rates downloads missing historical quotes while validating EUR imports.
+	Rates *rates.Client
 }
 
-func New(store *database.Store) *Pipeline { return &Pipeline{store: store, Now: time.Now} }
+func New(store *database.Store) *Pipeline {
+	return &Pipeline{store: store, Now: time.Now, Rates: rates.NewClient()}
+}
 
 type txn struct {
 	*sql.Tx
@@ -197,7 +201,7 @@ func (p *Pipeline) Stage(ctx context.Context, accountID int64, filename string, 
 	if err := p.saveMapping(ctx, batch, mapping); err != nil {
 		return batch.ID, err
 	}
-	return batch.ID, p.validate(ctx, batch.ID, location)
+	return batch.ID, p.validate(ctx, batch.ID, location, true)
 }
 
 func (p *Pipeline) stream(ctx context.Context, batchID int64, body io.Reader) (int64, error) {
@@ -339,6 +343,7 @@ func (p *Pipeline) knownMapping(ctx context.Context, batch dbgen.ImportBatch) (M
 // saveMapping caches the mapping as a new version for the source and format
 // unless it equals the latest one, and snapshots it on the batch.
 func (p *Pipeline) saveMapping(ctx context.Context, batch dbgen.ImportBatch, mapping Mapping) error {
+	mapping = completeBuiltinActions(Header(batch), mapping)
 	canonical := mapping.Canonical()
 	return p.inTx(ctx, func(q txn) error {
 		key := dbgen.LatestMappingParams{Source: Source(batch.SourceAccountID), FormatFingerprint: batch.FormatFingerprint.String}
@@ -390,7 +395,7 @@ func (p *Pipeline) SetMapping(ctx context.Context, batchID int64, mapping Mappin
 	if err := p.saveMapping(ctx, batch, mapping); err != nil {
 		return err
 	}
-	return p.validate(ctx, batchID, location)
+	return p.validate(ctx, batchID, location, true)
 }
 
 // Sample returns the header, at most SampleSize records, and the account
@@ -546,7 +551,7 @@ func (p *Pipeline) Validate(ctx context.Context, batchID int64, location *time.L
 	if _, err := p.editableBatch(ctx, batchID); err != nil {
 		return err
 	}
-	return p.validate(ctx, batchID, location)
+	return p.validate(ctx, batchID, location, true)
 }
 
 type summary struct {
@@ -588,7 +593,7 @@ func (s *summary) add(row int64, o outcome) {
 
 // validate classifies rows in chunks, each in a short transaction so other
 // requests are not blocked by a large file.
-func (p *Pipeline) validate(ctx context.Context, batchID int64, location *time.Location) error {
+func (p *Pipeline) validate(ctx context.Context, batchID int64, location *time.Location, fetchRates bool) error {
 	batch, err := p.store.Queries.GetImportBatch(ctx, batchID)
 	if err != nil {
 		return err
@@ -597,6 +602,17 @@ func (p *Pipeline) validate(ctx context.Context, batchID int64, location *time.L
 	if !ok {
 		return &Error{Kind: Conflict, Message: "Choose a mapping before validating"}
 	}
+	completed := completeBuiltinActions(Header(batch), mapping)
+	if completed.Canonical() != mapping.Canonical() {
+		if err := p.saveMapping(ctx, batch, completed); err != nil {
+			return err
+		}
+		batch, err = p.store.Queries.GetImportBatch(ctx, batchID)
+		if err != nil {
+			return err
+		}
+		mapping = completed
+	}
 	pass, err := p.newRun(ctx, batch, &mapping, location)
 	if err != nil {
 		return err
@@ -604,12 +620,16 @@ func (p *Pipeline) validate(ctx context.Context, batchID int64, location *time.L
 	result := summary{counts: map[string]int64{}, unknownIndex: map[string]int{}}
 	var after int64
 	for {
-		var page []dbgen.StagingRow
-		err := p.inTx(ctx, func(q txn) error {
-			page, err = q.ListStagingRows(ctx, dbgen.ListStagingRowsParams{BatchID: batchID, AfterRow: after, PageSize: chunkSize})
-			if err != nil {
+		page, err := p.store.Queries.ListStagingRows(ctx, dbgen.ListStagingRowsParams{BatchID: batchID, AfterRow: after, PageSize: chunkSize})
+		if err != nil {
+			return err
+		}
+		if fetchRates {
+			if err := p.prefetchRates(ctx, pass, page); err != nil {
 				return err
 			}
+		}
+		err = p.inTx(ctx, func(q txn) error {
 			for _, row := range page {
 				o, err := classify(ctx, q, pass, row)
 				if err != nil {
@@ -686,12 +706,14 @@ func RowValues(raw string, corrected sql.NullString) ([]string, error) {
 
 // run holds what every row of one validation or commit pass needs.
 type run struct {
-	batch    dbgen.ImportBatch
-	mapping  *Mapping
-	header   []string
-	location *time.Location
-	currency string // the account currency
-	now      time.Time
+	batch        dbgen.ImportBatch
+	mapping      *Mapping
+	header       []string
+	location     *time.Location
+	currency     string // the account currency
+	now          time.Time
+	convertToEUR bool
+	historical   map[string]bool
 }
 
 func (p *Pipeline) newRun(ctx context.Context, batch dbgen.ImportBatch, mapping *Mapping, location *time.Location) (run, error) {
@@ -699,7 +721,9 @@ func (p *Pipeline) newRun(ctx context.Context, batch dbgen.ImportBatch, mapping 
 	if err != nil {
 		return run{}, err
 	}
-	return run{batch: batch, mapping: mapping, header: Header(batch), location: location, currency: account.Currency, now: p.Now()}, nil
+	builtin, verified := Trading212(Header(batch))
+	convertToEUR := account.Currency == "EUR" && verified && mapping.ActionColumn != nil && *mapping.ActionColumn == *builtin.ActionColumn
+	return run{batch: batch, mapping: mapping, header: Header(batch), location: location, currency: account.Currency, now: p.Now(), convertToEUR: convertToEUR, historical: map[string]bool{}}, nil
 }
 
 // classify interprets a row and compares it with earlier rows of the file
@@ -718,7 +742,7 @@ func classify(ctx context.Context, q txn, r run, row dbgen.StagingRow) (outcome,
 		return outcome{status: RowInvalid, errors: []string{fmt.Sprintf("This row has %d values; the header has %d columns", len(values), len(header))}}, nil
 	}
 	result := mapping.Interpret(values, r.location)
-	if len(result.Errors) == 0 && result.Record.Currency != r.currency {
+	if result.Record.Kind != KindSkip && len(result.Errors) == 0 && result.Record.Currency != r.currency && !r.convertToEUR {
 		result.Errors = []string{fmt.Sprintf("This row is in %s, but the account is in %s. Upload it to an account in %[1]s.",
 			result.Record.Currency, r.currency)}
 	}
@@ -813,7 +837,11 @@ func convert(ctx context.Context, q txn, r run, o outcome) (outcome, error) {
 	var missing *rates.MissingRate
 	switch {
 	case errors.As(err, &missing):
-		o.status, o.externalID, o.errors = RowInvalid, "", []string{missing.Error()}
+		message := missing.Error()
+		if r.convertToEUR {
+			message = fmt.Sprintf("The %s rate for %s could not be saved. Validate again to retry, or exclude this row.", o.record.Currency, o.record.Date)
+		}
+		o.status, o.externalID, o.errors = RowInvalid, "", []string{message}
 		return o, nil
 	case err != nil:
 		return o, err
@@ -917,7 +945,7 @@ func (p *Pipeline) commit(ctx context.Context, batchID int64, location *time.Loc
 				}
 				switch o.status {
 				case RowValid:
-					picked, err := insert(ctx, q, batch, pass.header, row, o.record, picks)
+					picked, err := insert(ctx, q, batch, pass.header, row, o.record, pass.currency, picks)
 					if err != nil {
 						return err
 					}
@@ -959,7 +987,7 @@ func (p *Pipeline) commit(ctx context.Context, batchID int64, location *time.Loc
 		return finishCommit(ctx, q, batch, int64(inserted), p.Now(), mode == commitForReview)
 	})
 	if errors.Is(err, errChanged) {
-		if refresh := p.validate(ctx, batchID, location); refresh != nil {
+		if refresh := p.validate(ctx, batchID, location, false); refresh != nil {
 			return refresh
 		}
 	}
@@ -991,7 +1019,7 @@ func finishCommit(ctx context.Context, q txn, batch dbgen.ImportBatch, inserted 
 
 // insert writes one ledger transaction and reports whether its category is
 // Jev's pick.
-func insert(ctx context.Context, q txn, batch dbgen.ImportBatch, header []string, row dbgen.StagingRow, record *Record, picks map[string]pick) (bool, error) {
+func insert(ctx context.Context, q txn, batch dbgen.ImportBatch, header []string, row dbgen.StagingRow, record *Record, accountCurrency string, picks map[string]pick) (bool, error) {
 	var payee, category sql.NullInt64
 	var hint *pick
 	// Names without letters or digits, such as "-", leave the payee empty.
@@ -1023,11 +1051,15 @@ func insert(ctx context.Context, q txn, batch dbgen.ImportBatch, header []string
 		}
 		eurCents = record.Conversion.EURCents
 	}
+	amount, currency, units := record.AmountMinor, record.Currency, minorUnit
+	if accountCurrency == "EUR" && record.Currency != "EUR" {
+		amount, currency, units = eurCents, "EUR", 2
+	}
 	created, err := q.CreateTransaction(ctx, dbgen.CreateTransactionParams{
 		AccountID: batch.SourceAccountID, SourceAccountID: sql.NullInt64{Int64: batch.SourceAccountID, Valid: true},
 		ExternalID: sql.NullString{String: record.ExternalID, Valid: true}, ImportBatchID: sql.NullInt64{Int64: batch.ID, Valid: true},
-		OccurredAt: record.OccurredAt, LocalDate: record.Date, Kind: record.Kind, AmountMinor: record.AmountMinor,
-		Currency: record.Currency, MinorUnit: int64(minorUnit), EurCents: eurCents,
+		OccurredAt: record.OccurredAt, LocalDate: record.Date, Kind: record.Kind, AmountMinor: amount,
+		Currency: currency, MinorUnit: int64(units), EurCents: eurCents,
 		PayeeID: payee, CategoryID: category, Notes: record.Notes, ReviewStatus: "needs_review",
 	})
 	if err != nil {
@@ -1060,4 +1092,53 @@ func insert(ctx context.Context, q txn, batch dbgen.ImportBatch, header []string
 		RawRecordJson: encode(raw), AmountMinor: sql.NullInt64{Int64: record.AmountMinor, Valid: true},
 		OccurredAt: sql.NullString{String: record.OccurredAt, Valid: true},
 	})
+}
+
+// prefetchRates runs before the validation transaction so downloads never
+// hold a database write lock. Reappearing source IDs need no new conversion.
+func (p *Pipeline) prefetchRates(ctx context.Context, r run, page []dbgen.StagingRow) error {
+	if !r.convertToEUR {
+		return nil
+	}
+	for _, row := range page {
+		if row.ExcludedByOwner == 1 {
+			continue
+		}
+		values, err := RowValues(row.RawRecordJson, row.CorrectedRecordJson)
+		if err != nil {
+			return err
+		}
+		if len(values) != len(r.header) {
+			continue
+		}
+		result := r.mapping.Interpret(values, r.location)
+		record := result.Record
+		if len(result.Errors) > 0 || record.Kind == KindSkip || record.Currency == "EUR" {
+			continue
+		}
+		if r.mapping.ExternalIDColumn != nil {
+			_, err := p.store.Queries.FindTransactionBySourceID(ctx, dbgen.FindTransactionBySourceIDParams{
+				SourceAccountID: sql.NullInt64{Int64: r.batch.SourceAccountID, Valid: true}, ExternalID: sql.NullString{String: record.ExternalID, Valid: true}})
+			if err == nil {
+				continue
+			}
+			if !errors.Is(err, sql.ErrNoRows) {
+				return err
+			}
+		}
+		key := record.Date + "/" + record.Currency
+		if _, seen := r.historical[key]; seen {
+			continue
+		}
+		r.historical[key] = true
+		err = rates.EnsureHistorical(ctx, p.store.Queries, p.Rates, record.Date, record.Currency, r.now)
+		var fetchError *rates.FetchError
+		if err != nil && !errors.As(err, &fetchError) {
+			return err
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+	}
+	return nil
 }

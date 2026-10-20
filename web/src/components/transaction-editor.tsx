@@ -195,7 +195,7 @@ function EditorForm({ detail, accounts, categories, account, timezone, onDone }:
   const allowed: Kind[] = linkedTransfer ? ["transfer"] : detail && !detail.imported && detail.kind !== "transfer"
     ? ["expense", "income", "refund"] : ["expense", "income", "transfer", "refund"];
   // A converted amount keeps its sign, so only types with the same direction apply.
-  const outgoing = detail?.amount.startsWith("-");
+  const outgoing = (detail?.conversion?.originalAmount ?? detail?.amount)?.startsWith("-");
   const choices = converted ? allowed.filter((value) => value === "transfer" || (outgoing ? value === "expense" : value !== "expense")) : allowed;
   const splitting = (kind === "expense" || kind === "income") && splits.fields.length > 0;
 

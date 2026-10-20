@@ -8,6 +8,8 @@ The app has a Next.js frontend, a Go API, and encrypted SQLCipher storage. Go se
 
 Track transactions, accounts, categories, payees, subscriptions, and investments. CSV statements from Trading 212 and supported Slovak banks are recognized automatically. For other banks, you map the columns once and the mapping is reused for later files. Optional TypeSafe and Resend integrations provide AI assistance and email notifications. The interface supports English and Slovak, light and dark themes, and keyboard shortcuts.
 
+Trading 212 statements can contain multiple currencies. When importing into an EUR account, foreign payments are converted using Frankfurter's rate for the transaction's local date. Missing historical rates are fetched and cached during validation. Each transaction keeps its original amount, currency, and saved conversion for later review. Cashback is excluded, deposits and withdrawals are transfers, and card credits are refunds.
+
 ## Preview
 
 The screenshots show fictional demo data.

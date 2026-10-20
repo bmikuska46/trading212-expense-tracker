@@ -200,14 +200,14 @@ func TestForeignImportConvertsAtSavedRates(t *testing.T) {
 func TestImportRowMustMatchAccountCurrency(t *testing.T) {
 	app := newTestApp(t, Options{Now: func() time.Time { return localTime("2026-08-10", 19, 0) }})
 	cookie := app.setup()
-	euros := app.account(cookie, "Euros")
+	dollars := app.foreignAccount(cookie, "Dollars", "USD")
 	app.saveRate(localTime("2026-08-03", 18, 5), "2026-08-03", "USD", "1.1")
-	staged := app.imported(cookie, euros, "mixed.csv", []byte(header+
+	staged := app.imported(cookie, dollars, "mixed.csv", []byte(header+
 		"Card debit,2026-08-03 09:14:22,,mix-1,-12.34,USD,Example Diner,RESTAURANTS\n"+
 		"Card debit,2026-08-03 10:00:00,,mix-2,-3.00,EUR,Sample Kiosk,MISCELLANEOUS\n"))
 	invalid := app.stagedRows(cookie, staged.ID, "invalid")
 	if staged.ErrorCount != 1 || len(invalid) != 1 ||
-		!strings.Contains(invalid[0].Errors[0], "This row is in USD, but the account is in EUR") {
+		!strings.Contains(invalid[0].Errors[0], "This row is in EUR, but the account is in USD") {
 		t.Fatalf("mismatch: %+v %+v", staged, invalid)
 	}
 }

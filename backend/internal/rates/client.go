@@ -1,7 +1,5 @@
-// Package rates downloads the latest exchange rates with EUR and every
-// account currency as the base, keeps them in the encrypted cache, and
-// converts foreign amounts to EUR. It never requests historical dates or date
-// ranges.
+// Package rates caches daily and historical exchange rates and converts
+// foreign amounts to EUR.
 package rates
 
 import (
@@ -26,9 +24,10 @@ const (
 	// the base query parameter, blended across Frankfurter's default providers.
 	Endpoint = "https://api.frankfurter.dev/v2/rates"
 	// Base is the currency the ledger converts to.
-	Base           = "EUR"
-	ProviderPolicy = "frankfurter-v2-latest-default-providers"
-	Timezone       = "Europe/Bratislava"
+	Base                     = "EUR"
+	ProviderPolicy           = "frankfurter-v2-latest-default-providers"
+	HistoricalProviderPolicy = "frankfurter-v2-historical-default-providers"
+	Timezone                 = "Europe/Bratislava"
 	// PublishHour is the local hour of the daily fetch. By then the day's
 	// publications are out, so a fetch at or after it confirms the whole day.
 	PublishHour = 18
@@ -94,12 +93,35 @@ func NewClient() *Client {
 	}
 }
 
-// Latest downloads the current rates against a base currency. It is the
-// only request this package makes; there are no date parameters.
+// Latest downloads the current rates against a base currency.
 func (c *Client) Latest(ctx context.Context, base string) ([]Quote, error) {
+	return c.fetch(ctx, base, url.Values{"base": {base}})
+}
+
+// At requests the published rate applicable to one transaction date.
+func (c *Client) At(ctx context.Context, date, currency string) (Quote, error) {
+	if _, err := time.Parse(time.DateOnly, date); err != nil || !currencyCode(currency) || currency == Base {
+		return Quote{}, &FetchError{Code: "invalid_request", Detail: "Choose a valid rate date and foreign currency"}
+	}
+	quotes, err := c.fetch(ctx, Base, url.Values{"base": {Base}, "quotes": {currency}, "date": {date}})
+	if err != nil {
+		return Quote{}, err
+	}
+	if len(quotes) != 1 || quotes[0].Quote != currency || quotes[0].Date > date {
+		return Quote{}, &FetchError{Code: "invalid_response", Detail: "The rate response does not match the requested currency and date"}
+	}
+	return quotes[0], nil
+}
+
+func (c *Client) fetch(ctx context.Context, base string, query url.Values) ([]Quote, error) {
 	ctx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, c.URL+"?base="+url.QueryEscape(base), nil)
+	address, err := url.Parse(c.URL)
+	if err != nil {
+		return nil, &FetchError{Code: "unreachable", Detail: "The rate service address is invalid"}
+	}
+	address.RawQuery = query.Encode()
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, address.String(), nil)
 	if err != nil {
 		return nil, &FetchError{Code: "unreachable", Detail: "The rate service address is invalid"}
 	}

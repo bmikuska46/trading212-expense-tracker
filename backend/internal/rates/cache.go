@@ -71,7 +71,7 @@ func (e *MissingRate) Error() string {
 	if e.Upcoming {
 		return fmt.Sprintf("The %s rate for %s is not collected yet. Rates are saved daily at 18:00 Europe/Bratislava; validate again after the next update.", e.Currency, e.Date)
 	}
-	return fmt.Sprintf("No saved %s rate covers %s. Past rates are never downloaded, so exclude this row to import the rest.", e.Currency, e.Date)
+	return fmt.Sprintf("No saved %s rate covers %s. Trading 212 imports into EUR accounts fetch missing rates when validated; otherwise exclude this row to import the rest.", e.Currency, e.Date)
 }
 
 // Convert divides a foreign amount by the rate for its local date: the

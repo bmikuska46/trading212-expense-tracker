@@ -231,7 +231,8 @@ func (a *api) prepare(ctx context.Context, q txn, input transactionInput, curren
 		currency = "EUR"
 	}
 	money, err := ledger.ParseMoney(strings.TrimSpace(input.Amount), currency)
-	if err != nil || money.Minor() <= 0 {
+	convertedZero := edit != nil && edit.conversion != nil && existing.AmountMinor == 0
+	if err != nil || money.Minor() < 0 || (money.Minor() == 0 && !convertedZero) {
 		fields["amount"] = "Enter a positive amount, such as 12.50"
 	} else {
 		d.magnitude = money.Minor()
@@ -244,9 +245,11 @@ func (a *api) prepare(ctx context.Context, q txn, input transactionInput, curren
 		// and its sign stay as imported.
 		switch {
 		case d.magnitude != max(existing.AmountMinor, -existing.AmountMinor):
-			fields["amount"] = "This amount was converted from " + existing.Currency + " at a saved rate and cannot change"
+			fields["amount"] = "This amount was converted from " + edit.conversion.OriginalCurrency + " at a saved rate and cannot change"
 		case ledger.SignedAmount(d.kind, d.magnitude, existing.AmountMinor < 0) != existing.AmountMinor:
-			fields["kind"] = "This type would reverse the saved " + existing.Currency + " conversion"
+			fields["kind"] = "This type would reverse the saved " + edit.conversion.OriginalCurrency + " conversion"
+		case convertedZero && !ledger.SignMatchesKind(d.kind, edit.conversion.OriginalAmountMinor):
+			fields["kind"] = "This type would reverse the saved " + edit.conversion.OriginalCurrency + " conversion"
 		}
 	}
 

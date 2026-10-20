@@ -285,6 +285,7 @@ func Trading212(header []string) (Mapping, bool) {
 		FeeCurrencyColumn: optional("Currency (Currency conversion fee)"),
 		Actions: []ActionRule{
 			{Value: "Card debit", Kind: ledger.KindExpense},
+			{Value: "Card credit", Kind: ledger.KindRefund},
 			{Value: "Deposit", Kind: ledger.KindTransfer},
 			{Value: "Withdrawal", Kind: ledger.KindTransfer},
 			{Value: "Spending cashback", Kind: KindSkip},
@@ -295,4 +296,24 @@ func Trading212(header []string) (Mapping, bool) {
 		mapping.FeeCurrencyColumn = nil
 	}
 	return mapping, true
+}
+
+// completeBuiltinActions fills gaps in a verified export without replacing
+// any action or column choices the owner saved.
+func completeBuiltinActions(header []string, mapping Mapping) Mapping {
+	builtin, ok := Trading212(header)
+	if !ok || mapping.ActionColumn == nil || *mapping.ActionColumn != *builtin.ActionColumn {
+		return mapping
+	}
+	seen := make(map[string]bool, len(mapping.Actions))
+	for _, rule := range mapping.Actions {
+		seen[normalizeAction(rule.Value)] = true
+	}
+	mapping.Actions = slices.Clone(mapping.Actions)
+	for _, rule := range builtin.Actions {
+		if !seen[normalizeAction(rule.Value)] {
+			mapping.Actions = append(mapping.Actions, rule)
+		}
+	}
+	return mapping
 }

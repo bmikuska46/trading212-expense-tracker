@@ -181,7 +181,7 @@ func TestDailyRateSchedule(t *testing.T) {
 		t.Fatalf("missed job = %+v", missed)
 	}
 	_, err = rates.Convert(ctx, h.store.Queries, mustUSD(t), "2026-09-15", at("2026-09-17", 8, 0))
-	if err == nil || !strings.Contains(err.Error(), "never downloaded") {
+	if err == nil || !strings.Contains(err.Error(), "No saved USD rate covers 2026-09-15") {
 		t.Fatalf("Tuesday conversion error = %v", err)
 	}
 	if _, err := rates.Convert(ctx, h.store.Queries, mustUSD(t), "2026-09-16", at("2026-09-17", 8, 0)); err != nil {

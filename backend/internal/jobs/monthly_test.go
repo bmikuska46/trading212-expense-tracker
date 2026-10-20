@@ -557,9 +557,9 @@ func TestDailySyncSkipsRowsTheOwnerHandled(t *testing.T) {
 	h := newMonthlyHarness(t, "2026-08")
 	ctx := context.Background()
 	h.fake.status = integrations.ReportFinished
-	h.fake.csv = augustReport + "Card debit,2026-08-01 10:00:00,,t212-usd,-5.00,USD,US Shop,RETAIL_STORES\n"
+	h.fake.csv = augustReport + "Unknown action,2026-08-01 10:00:00,,t212-unmapped,-5.00,EUR,Shop,RETAIL_STORES\n"
 
-	// A row in another currency stops the first sync for the owner.
+	// An unknown action stops the first sync for the owner.
 	h.run(at("2026-08-02", 6, 0), at("2026-08-02", 7, 0))
 	job := h.monthJob("2026-08")
 	if job.State != stateFailed || job.LastErrorCode.String != "needs_attention" {
@@ -568,7 +568,7 @@ func TestDailySyncSkipsRowsTheOwnerHandled(t *testing.T) {
 	// The owner excludes it and commits the import, which completes the job.
 	pipeline := imports.New(h.store)
 	var row int64
-	if err := h.store.DB.QueryRow("SELECT row_number FROM staging_rows WHERE batch_id = ? AND raw_record_json LIKE '%t212-usd%'",
+	if err := h.store.DB.QueryRow("SELECT row_number FROM staging_rows WHERE batch_id = ? AND raw_record_json LIKE '%t212-unmapped%'",
 		job.BatchID.Int64).Scan(&row); err != nil {
 		t.Fatal(err)
 	}

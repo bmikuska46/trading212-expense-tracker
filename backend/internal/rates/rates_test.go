@@ -232,10 +232,9 @@ func TestConvertFallsBackWithoutFutureRates(t *testing.T) {
 	if _, err := Convert(ctx, store.Queries, usd(t, "10.00"), "2026-09-16", now); !errors.As(err, &missing) {
 		t.Fatalf("Wednesday error = %v", err)
 	}
-	// Before the first cached publication nothing applies, and a week later
-	// the gap is reported as history that is never downloaded.
+	// Conversion alone never fills a gap in the cached publications.
 	_, err = Convert(ctx, store.Queries, usd(t, "10.00"), "2026-09-01", local("2026-09-22", 12))
-	if !errors.As(err, &missing) || missing.Upcoming || !strings.Contains(missing.Error(), "never downloaded") {
+	if !errors.As(err, &missing) || missing.Upcoming || !strings.Contains(missing.Error(), "No saved USD rate covers 2026-09-01") {
 		t.Fatalf("history error = %v", err)
 	}
 	_, err = Convert(ctx, store.Queries, usd(t, "10.00"), "2026-09-14", local("2026-09-22", 12))

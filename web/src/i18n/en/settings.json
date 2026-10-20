@@ -30,7 +30,7 @@
     "refreshing": "Refreshing rate status",
     "refresh": "Refresh rate status",
     "loading": "Loading rate status",
-    "footer": "Foreign transactions use the rate for their date, or the preceding published rate on weekends and holidays. Past rates are never downloaded, so a date the server missed stays without a rate.",
+    "footer": "Foreign transactions use the rate for their date, or the preceding published rate when none was published that day. Trading 212 imports into EUR accounts fetch and save missing historical rates automatically. Each imported conversion keeps its saved rate.",
     "bases": "Bases",
     "basesHint": "EUR and every account currency"
   },

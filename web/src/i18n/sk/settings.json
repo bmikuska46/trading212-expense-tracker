@@ -30,7 +30,7 @@
     "refreshing": "Obnovujem stav kurzov",
     "refresh": "Obnoviť stav kurzov",
     "loading": "Načítavam stav kurzov",
-    "footer": "Transakcie v cudzej mene používajú kurz zo svojho dňa, cez víkendy a sviatky posledný predtým zverejnený kurz. Staršie kurzy sa dodatočne nesťahujú, takže deň, ktorý server vynechal, zostane bez kurzu.",
+    "footer": "Transakcie v cudzej mene používajú kurz zo svojho dňa alebo posledný predtým zverejnený kurz, ak v daný deň nebol zverejnený nový. Importy z Trading 212 do účtov v EUR automaticky stiahnu a uložia chýbajúce historické kurzy. Každý importovaný prepočet si zachová uložený kurz.",
     "bases": "Základy",
     "basesHint": "EUR a mena každého účtu"
   },

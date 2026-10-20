@@ -35,8 +35,7 @@ func optional(value string) *string {
 	return &value
 }
 
-// getRates reports the state of the daily rate job and the cache. Rates
-// are fetched only by the scheduler, never by a request.
+// getRates reports the state of the daily rate job and the cache.
 func (a *api) getRates(w http.ResponseWriter, r *http.Request, _ *session) {
 	q := a.store.Queries
 	summary, err := q.RateSummary(r.Context())

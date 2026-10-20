@@ -218,9 +218,9 @@ func TestReimportFlagsConflictingSourceValues(t *testing.T) {
 
 const unknownActionFile = "Action,Time (UTC),Notes,ID,Total,Currency (Total),Merchant name,Merchant category\n" +
 	"Card debit,2026-08-02 09:14:22,,anon-1,-12.40,EUR,Example Bistro,RESTAURANTS\n" +
-	"Card credit,2026-08-04 10:00:00,,anon-2,5.00,EUR,Example Market,RETAIL_STORES\n" +
+	"Merchant refund,2026-08-04 10:00:00,,anon-2,5.00,EUR,Example Market,RETAIL_STORES\n" +
 	"Card debit,2026-13-40 10:00:00,,anon-3,-3.00,EUR,Sample Kiosk,MISCELLANEOUS\n" +
-	"Card debit,2026-08-06 10:00:00,,anon-4,-7.00,USD,Sample Shop,MISCELLANEOUS\n"
+	"Card debit,2026-08-06 10:00:00,,anon-4,-7.00,XYZ,Sample Shop,MISCELLANEOUS\n"
 
 func TestInvalidImportWritesNothingUntilCorrected(t *testing.T) {
 	app := newTestApp(t, Options{})
@@ -230,7 +230,7 @@ func TestInvalidImportWritesNothingUntilCorrected(t *testing.T) {
 
 	staged := app.imported(cookie, account, "unknown.csv", []byte(unknownActionFile))
 	if staged.State != stateNeedsAttention || staged.ErrorCount != 3 || len(staged.UnknownActions) != 1 ||
-		staged.UnknownActions[0].Value != "Card credit" {
+		staged.UnknownActions[0].Value != "Merchant refund" {
 		t.Fatalf("invalid file: %+v", staged)
 	}
 	if response := app.request("POST", fmt.Sprintf("/api/imports/%d/commit", staged.ID), nil, cookie); response.Code != http.StatusConflict {
@@ -249,7 +249,7 @@ func TestInvalidImportWritesNothingUntilCorrected(t *testing.T) {
 	}
 
 	mapping := *staged.Mapping
-	mapping.Actions = append(mapping.Actions, imports.ActionRule{Value: "Card credit", Kind: "refund"})
+	mapping.Actions = append(mapping.Actions, imports.ActionRule{Value: "Merchant refund", Kind: "refund"})
 	remapped := decode[importDetail](t, app.expect(http.StatusOK, "PUT", fmt.Sprintf("/api/imports/%d/mapping", staged.ID),
 		map[string]any{"mapping": mapping}, cookie))
 	if remapped.ErrorCount != 2 || *remapped.MappingVersion != 2 {

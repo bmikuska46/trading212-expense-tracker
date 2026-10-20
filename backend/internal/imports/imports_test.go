@@ -298,12 +298,42 @@ func TestTrading212Mapping(t *testing.T) {
 	if skipped := mapping.Interpret(values, time.UTC); skipped.Record.Kind != KindSkip || len(skipped.Errors) != 0 || skipped.Record.Payee != "" {
 		t.Fatalf("cashback: %+v", skipped)
 	}
-	values[0] = "Card credit"
-	if unknown := mapping.Interpret(values, time.UTC); unknown.Unknown != "Card credit" || len(unknown.Errors) == 0 {
+	values[0] = "Merchant refund"
+	if unknown := mapping.Interpret(values, time.UTC); unknown.Unknown != "Merchant refund" || len(unknown.Errors) == 0 {
 		t.Fatalf("unknown action: %+v", unknown)
 	}
 	values[0], values[4] = "Card debit", "8.10"
 	if wrongSign := mapping.Interpret(values, time.UTC); len(wrongSign.Errors) == 0 {
 		t.Fatal("a card debit inflow must be rejected")
+	}
+}
+
+func TestCompleteTrading212ActionsPreservesExplicitMapping(t *testing.T) {
+	header := []string{"Action", "Time (UTC)", "Notes", "ID", "Total", "Currency (Total)"}
+	mapping, _ := Trading212(header)
+	mapping.Actions = []ActionRule{{Value: "  CARD   debit ", Kind: KindSkip}, {Value: "Custom", Kind: "income"}}
+	mapping.NotesColumn = nil
+	completed := completeBuiltinActions(header, mapping)
+	if len(completed.Actions) != 6 || completed.Actions[0] != mapping.Actions[0] || completed.Actions[1] != mapping.Actions[1] || completed.NotesColumn != nil {
+		t.Fatalf("completion changed explicit choices: %+v", completed)
+	}
+	if len(mapping.Actions) != 2 {
+		t.Fatal("completion changed the input mapping")
+	}
+	if again := completeBuiltinActions(header, completed); again.Canonical() != completed.Canonical() {
+		t.Fatal("completion is not idempotent")
+	}
+	for name, candidate := range map[string]Mapping{
+		"different action column": func() Mapping { changed := mapping; changed.ActionColumn = column(2); return changed }(),
+		"no action column":        func() Mapping { changed := mapping; changed.ActionColumn = nil; return changed }(),
+	} {
+		if got := completeBuiltinActions(header, candidate); got.Canonical() != candidate.Canonical() {
+			t.Fatalf("%s received built-in actions", name)
+		}
+	}
+	for _, unknown := range [][]string{append(slices.Clone(header), "Extra"), {"Action", "Date", "Amount"}} {
+		if got := completeBuiltinActions(unknown, mapping); got.Canonical() != mapping.Canonical() {
+			t.Fatal("an unverified header received built-in actions")
+		}
 	}
 }
