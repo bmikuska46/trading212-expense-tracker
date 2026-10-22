@@ -15,6 +15,7 @@ import { formatNumber } from "@/lib/format";
 import { showServerErrors } from "@/lib/forms";
 import { cn } from "@/lib/utils";
 import { cellClass, footerClass, headClass, PanelHeader } from "@/components/panel";
+import { SelectCombobox } from "@/components/select-combobox";
 import { nextSort, SortHead, useSort, type Sort } from "@/components/sortable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -96,10 +96,8 @@ function MergeTarget({ kind, entity, value, onChange }: { kind: EntityKind; enti
     </Field>}
     <Field>
       <FieldLabel htmlFor="merge-target">{t("mergeInto")}</FieldLabel>
-      <NativeSelect id="merge-target" className="w-full" value={value} onChange={(event) => onChange(event.target.value)}>
-        <NativeSelectOption value="">{t(`kinds.${kind}.choose`)}</NativeSelectOption>
-        {options.map((item) => <NativeSelectOption key={item.id} value={item.id}>{item.name}</NativeSelectOption>)}
-      </NativeSelect>
+      <SelectCombobox id="merge-target" className="w-full" value={value} onChange={onChange}
+        options={[{ value: "", label: t(`kinds.${kind}.choose`) }, ...options.map((item) => ({ value: String(item.id), label: item.name }))]} />
     </Field>
   </div>;
 }
@@ -236,10 +234,9 @@ function RuleRow({ rule, categories }: { rule: Rule; categories: Entity[] }) {
     <TableCell className={cn(cellClass, "font-medium whitespace-normal")}>{rule.payeeName}</TableCell>
     <TableCell className={cellClass}>
       <label htmlFor={`rule-${rule.id}-category`} className="sr-only">{t("categoryFor", { payee: rule.payeeName })}</label>
-      <NativeSelect id={`rule-${rule.id}-category`} size="sm" className="max-w-40" value={String(rule.categoryId)} disabled={update.isPending}
-        onChange={(event) => update.mutate({ categoryId: Number(event.target.value), enabled: rule.enabled })}>
-        {categories.map((category) => <NativeSelectOption key={category.id} value={category.id}>{category.name}</NativeSelectOption>)}
-      </NativeSelect>
+      <SelectCombobox id={`rule-${rule.id}-category`} size="sm" className="w-40" value={String(rule.categoryId)} disabled={update.isPending}
+        onChange={(value) => update.mutate({ categoryId: Number(value), enabled: rule.enabled })}
+        options={categories.map((category) => ({ value: String(category.id), label: category.name }))} />
     </TableCell>
     <TableCell className={cellClass}>
       <div className="flex items-center gap-2">

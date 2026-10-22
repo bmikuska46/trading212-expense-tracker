@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useDeferredValue, useRef, useState, type ReactNode } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Autocomplete } from "@base-ui/react";
 import { Controller, useFieldArray, useForm, useWatch, type Path } from "react-hook-form";
 import { Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -14,13 +15,14 @@ import { formatEURCents, formatMoney, todayIn } from "@/lib/format";
 import { showServerErrors } from "@/lib/forms";
 import { cn } from "@/lib/utils";
 import { alertClass, alertDescriptionClass, compactFields, legendClass } from "@/components/panel";
+import { SelectCombobox } from "@/components/select-combobox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { ComboboxContent, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -79,25 +81,38 @@ function toInput(values: Values, revision: number | undefined): TransactionInput
   };
 }
 
-// PayeeInput suggests existing payees while still accepting a new name, which
-// the server creates or matches to an equivalent one.
+type PayeeOption = { name: string; create?: boolean };
+
+// PayeeInput searches existing payees while still accepting a new name, which
+// the server creates or matches to an equivalent one. A name with no match is
+// offered as a row of its own, so creating a payee is a visible choice.
 function PayeeInput({ id, value, onChange, invalid, describedBy }: {
   id: string; value: string; onChange: (value: string) => void; invalid: boolean; describedBy?: string;
 }) {
-  const search = useDeferredValue(value.trim());
+  const t = useTranslations("editor");
+  const query = value.trim();
+  const search = useDeferredValue(query);
   const payees = useQuery({
     queryKey: ["payees", { q: search, pageSize: 20 }],
     queryFn: ({ signal }) => listPayees({ q: search, pageSize: 20 }, { signal }),
-    enabled: search.length > 0,
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
-  return <>
-    <Input id={id} className={inputClass} value={value} onChange={(event) => onChange(event.target.value)} list={`${id}-options`} maxLength={100}
-      autoComplete="off" aria-invalid={invalid} aria-describedby={describedBy} />
-    <datalist id={`${id}-options`}>
-      {payees.data?.payees.map((payee) => <option key={payee.id} value={payee.name} />)}
-    </datalist>
-  </>;
+  const matches: PayeeOption[] = (payees.data?.payees ?? []).map((payee) => ({ name: payee.name }));
+  const known = matches.some((payee) => payee.name.localeCompare(query, undefined, { sensitivity: "base" }) === 0);
+  const options = query && !known ? [...matches, { name: query, create: true }] : matches;
+  return <Autocomplete.Root items={options} filter={null} value={value} onValueChange={onChange} itemToStringValue={(option) => option.name}
+    autoHighlight openOnInputClick>
+    <ComboboxInput id={id} className={cn(inputClass, "w-full")} showTrigger={false} maxLength={100} autoComplete="off"
+      aria-invalid={invalid} aria-describedby={describedBy} />
+    <ComboboxContent>
+      <ComboboxList>
+        {(option: PayeeOption) => <ComboboxItem key={option.create ? "create" : option.name} value={option}>
+          {option.create ? <><Plus aria-hidden />{t("createPayee", { name: option.name })}</> : option.name}
+        </ComboboxItem>}
+      </ComboboxList>
+    </ComboboxContent>
+  </Autocomplete.Root>;
 }
 
 // RefundTarget lists recent expenses so a refund can be linked to the
@@ -115,13 +130,12 @@ function RefundTarget({ value, onChange, payee, current, invalid }: {
   const listed = current && !options.some((item) => item.id === current.id) ? [current, ...options] : options;
   return <Field data-invalid={invalid}>
     <FieldLabel htmlFor="editor-refund">{t("refundOf")}</FieldLabel>
-    <NativeSelect id="editor-refund" size="sm" className="w-full" value={value} onChange={(event) => onChange(event.target.value)}
-      aria-invalid={invalid} aria-describedby="editor-refund-description">
-      <NativeSelectOption value="">{t("notLinked")}</NativeSelectOption>
-      {listed.map((expense) => <NativeSelectOption key={expense.id} value={expense.id}>
-        {expense.date} - {expense.payeeName || t("noPayee")} - {formatMoney(magnitude(expense.amount), expense.currency)}
-      </NativeSelectOption>)}
-    </NativeSelect>
+    <SelectCombobox id="editor-refund" size="sm" className="w-full" value={value} onChange={onChange}
+      aria-invalid={invalid} aria-describedby="editor-refund-description"
+      options={[{ value: "", label: t("notLinked") }, ...listed.map((expense) => ({
+        value: String(expense.id),
+        label: `${expense.date} - ${expense.payeeName || t("noPayee")} - ${formatMoney(magnitude(expense.amount), expense.currency)}`,
+      }))]} />
     <FieldDescription id="editor-refund-description">
       {t("refundHint")} {search ? t("refundMatching", { search }) : t("refundSearch")}
     </FieldDescription>
@@ -258,21 +272,19 @@ function EditorForm({ detail, accounts, categories, account, timezone, onDone }:
         </FieldSet>} />
       <Field data-invalid={Boolean(errors.accountId)}>
         <FieldLabel htmlFor="editor-account">{kind === "transfer" && !linkedTransfer ? t("fromAccount") : t("account")}</FieldLabel>
-        <NativeSelect id="editor-account" size="sm" className="w-full" aria-invalid={Boolean(errors.accountId)} aria-describedby={describe("editor-account", errors.accountId)}
-          {...form.register("accountId", { required: t("chooseAccountError") })}>
-          {eligible.map((item) => <NativeSelectOption key={item.id} value={item.id}>{item.name}</NativeSelectOption>)}
-        </NativeSelect>
+        <Controller control={form.control} name="accountId" rules={{ required: t("chooseAccountError") }} render={({ field }) =>
+          <SelectCombobox id="editor-account" size="sm" className="w-full" aria-invalid={Boolean(errors.accountId)} aria-describedby={describe("editor-account", errors.accountId)}
+            {...field} options={eligible.map((item) => ({ value: String(item.id), label: item.name }))} />} />
         {errors.accountId && <FieldError id="editor-account-error">{errors.accountId.message}</FieldError>}
       </Field>
       {kind === "transfer" && !detail && <Field data-invalid={Boolean(errors.toAccountId)}>
         <FieldLabel htmlFor="editor-to-account">{t("toAccount")}</FieldLabel>
-        <NativeSelect id="editor-to-account" size="sm" className="w-full" aria-invalid={Boolean(errors.toAccountId)}
-          aria-describedby={describe("editor-to-account", errors.toAccountId)}
-          {...form.register("toAccountId", { validate: (value, all) => all.kind !== "transfer" || Boolean(value) || t("chooseReceiving") })}>
-          <NativeSelectOption value="">{t("chooseAccount")}</NativeSelectOption>
-          {eligible.filter((item) => String(item.id) !== accountId).map((item) =>
-            <NativeSelectOption key={item.id} value={item.id}>{item.name}</NativeSelectOption>)}
-        </NativeSelect>
+        <Controller control={form.control} name="toAccountId"
+          rules={{ validate: (value, all) => all.kind !== "transfer" || Boolean(value) || t("chooseReceiving") }} render={({ field }) =>
+          <SelectCombobox id="editor-to-account" size="sm" className="w-full" aria-invalid={Boolean(errors.toAccountId)}
+            aria-describedby={describe("editor-to-account", errors.toAccountId)} {...field}
+            options={[{ value: "", label: t("chooseAccount") },
+              ...eligible.filter((item) => String(item.id) !== accountId).map((item) => ({ value: String(item.id), label: item.name }))]} />} />
         {errors.toAccountId && <FieldError id="editor-to-account-error">{errors.toAccountId.message}</FieldError>}
       </Field>}
       {linkedTransfer && detail?.transferCounterpart && <p className="self-end text-xs text-muted-foreground">
@@ -306,11 +318,12 @@ function EditorForm({ detail, accounts, categories, account, timezone, onDone }:
       {errors.refundOf && <FieldError className="sm:col-span-2">{errors.refundOf.message}</FieldError>}
       {kind !== "transfer" && !splitting && <Field data-invalid={Boolean(errors.categoryId)}>
         <FieldLabel htmlFor="editor-category">{t("category")}</FieldLabel>
-        <NativeSelect id="editor-category" size="sm" className="w-full" aria-invalid={Boolean(errors.categoryId)}
-          aria-describedby={describe("editor-category", errors.categoryId, true)} {...form.register("categoryId")}>
-          <NativeSelectOption value="">{kind === "refund" ? t("sameAsPurchase") : detail ? uncategorized?.name ?? t("uncategorized") : t("payeeRule")}</NativeSelectOption>
-          {categories.filter((category) => !detail || kind === "refund" || category !== uncategorized).map((category) => <NativeSelectOption key={category.id} value={category.id}>{category.name}</NativeSelectOption>)}
-        </NativeSelect>
+        <Controller control={form.control} name="categoryId" render={({ field }) =>
+          <SelectCombobox id="editor-category" size="sm" className="w-full" aria-invalid={Boolean(errors.categoryId)}
+            aria-describedby={describe("editor-category", errors.categoryId, true)} {...field}
+            options={[{ value: "", label: kind === "refund" ? t("sameAsPurchase") : detail ? uncategorized?.name ?? t("uncategorized") : t("payeeRule") },
+              ...categories.filter((category) => !detail || kind === "refund" || category !== uncategorized)
+                .map((category) => ({ value: String(category.id), label: category.name }))]} />} />
         <FieldDescription id="editor-category-description">
           {kind === "refund" ? t("refundCategoryHint") : t("categoryHint")}
         </FieldDescription>
@@ -330,11 +343,9 @@ function EditorForm({ detail, accounts, categories, account, timezone, onDone }:
             return <div key={split.id} className="grid gap-2 sm:grid-cols-[1fr_8rem_1fr_auto] sm:items-start">
               <Field data-invalid={Boolean(fieldErrors?.categoryId)}>
                 <FieldLabel htmlFor={`split-${index}-category`} className="sr-only">{t("partCategory", { number: index + 1 })}</FieldLabel>
-                <NativeSelect id={`split-${index}-category`} size="sm" className="w-full" aria-invalid={Boolean(fieldErrors?.categoryId)}
-                  {...form.register(`splits.${index}.categoryId`, { required: t("chooseCategoryError") })}>
-                  <NativeSelectOption value="">{t("chooseCategory")}</NativeSelectOption>
-                  {categories.map((category) => <NativeSelectOption key={category.id} value={category.id}>{category.name}</NativeSelectOption>)}
-                </NativeSelect>
+                <Controller control={form.control} name={`splits.${index}.categoryId`} rules={{ required: t("chooseCategoryError") }} render={({ field }) =>
+                  <SelectCombobox id={`split-${index}-category`} size="sm" className="w-full" aria-invalid={Boolean(fieldErrors?.categoryId)} {...field}
+                    options={[{ value: "", label: t("chooseCategory") }, ...categories.map((category) => ({ value: String(category.id), label: category.name }))]} />} />
                 {fieldErrors?.categoryId && <FieldError>{fieldErrors.categoryId.message}</FieldError>}
               </Field>
               <Field data-invalid={Boolean(fieldErrors?.amount)}>

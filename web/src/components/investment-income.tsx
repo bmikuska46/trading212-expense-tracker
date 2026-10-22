@@ -8,12 +8,12 @@ import { Download, TriangleAlert } from "lucide-react";
 import { getInvestmentIncome, type IncomeKind, type IncomeMethod, type InvestmentIncome as IncomeData } from "@/lib/api";
 import { dateFormat, formatEURCents, formatMinor } from "@/lib/format";
 import { alertClass, alertDescriptionClass, cellClass, headClass, PanelHeader } from "@/components/panel";
+import { SelectCombobox } from "@/components/select-combobox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Empty, EmptyContent, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -210,10 +210,8 @@ export function InvestmentIncome() {
             <a href={`/api/investing/income.csv?year=${data.year}`} download><Download aria-hidden="true" />CSV</a>
           </Button>}
           <label htmlFor="investment-income-year" className="sr-only">{t("year")}</label>
-          <NativeSelect id="investment-income-year" size="sm" className="font-mono" value={data.year}
-            onChange={(event) => setYear(Number(event.target.value))}>
-            {data.years.map((value) => <NativeSelectOption key={value} value={value}>{value}</NativeSelectOption>)}
-          </NativeSelect>
+          <SelectCombobox id="investment-income-year" size="sm" className="w-24 font-mono" value={String(data.year)}
+            onChange={(value) => setYear(Number(value))} options={data.years.map((value) => ({ value: String(value), label: String(value) }))} />
         </>} />
       {body}
     </Card>

@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { updateTimezone, type Session, type User } from "@/lib/api";
 import { showServerErrors } from "@/lib/forms";
@@ -10,6 +10,7 @@ import { isLocale, localeNames, locales } from "@/lib/locale";
 import { useSession } from "@/lib/session";
 import { IntegrationSettings } from "@/components/integration-settings";
 import { PasswordSettings } from "@/components/password-form";
+import { SelectCombobox } from "@/components/select-combobox";
 import { SignIns } from "@/components/sign-ins";
 import { UserSettings } from "@/components/user-settings";
 import { setLocale, useLocaleSetting } from "@/components/locale";
@@ -18,7 +19,6 @@ import { TimezoneSelect } from "@/components/timezone-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 
 // LocaleField switches the interface language at once. The choice belongs to
 // this browser, so it needs no saving.
@@ -27,10 +27,9 @@ function LocaleField() {
   const locale = useLocaleSetting();
   return <Field>
     <FieldLabel htmlFor="settings-language">{t("language")}</FieldLabel>
-    <NativeSelect id="settings-language" size="sm" className="w-full" value={locale} aria-describedby="settings-language-description"
-      onChange={(event) => { if (isLocale(event.target.value)) setLocale(event.target.value); }}>
-      {locales.map((value) => <NativeSelectOption key={value} value={value} lang={value}>{localeNames[value]}</NativeSelectOption>)}
-    </NativeSelect>
+    <SelectCombobox id="settings-language" size="sm" className="w-full" value={locale} aria-describedby="settings-language-description"
+      onChange={(value) => { if (isLocale(value)) setLocale(value); }}
+      options={locales.map((value) => ({ value, label: localeNames[value], lang: value }))} />
     <FieldDescription id="settings-language-description">{t("languageHint")}</FieldDescription>
   </Field>;
 }
@@ -58,8 +57,9 @@ function TimezoneForm({ user }: { user: User }) {
         onSubmit={form.handleSubmit((values) => { setStatus(""); mutation.mutate(values); })}>
         <Field data-invalid={Boolean(error)}>
           <FieldLabel htmlFor="settings-timezone">{t("timezone")}</FieldLabel>
-          <TimezoneSelect id="settings-timezone" size="sm" current={user.timezone} aria-invalid={Boolean(error)}
-            aria-describedby={`settings-timezone-description${error ? " settings-timezone-error" : ""}`} {...form.register("timezone")} />
+          <Controller control={form.control} name="timezone" render={({ field }) =>
+            <TimezoneSelect id="settings-timezone" size="sm" current={user.timezone} aria-invalid={Boolean(error)}
+              aria-describedby={`settings-timezone-description${error ? " settings-timezone-error" : ""}`} {...field} />} />
           <FieldDescription id="settings-timezone-description">{t("timezoneHint")}</FieldDescription>
           {error && <FieldError id="settings-timezone-error">{error.message}</FieldError>}
         </Field>

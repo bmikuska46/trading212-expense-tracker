@@ -49,6 +49,7 @@
   "convertedHint": "Converted to EUR at a saved rate, so the amount cannot change.",
   "payee": "Payee",
   "payeeHint": "A new name creates a payee. Equivalent spellings reuse the existing one.",
+  "createPayee": "Create payee \"{name}\"",
   "category": "Category",
   "sameAsPurchase": "Same as the purchase",
   "uncategorized": "Uncategorized",

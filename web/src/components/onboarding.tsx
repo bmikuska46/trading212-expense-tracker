@@ -3,7 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { useDocumentTitle } from "@/components/locale";
 import { ArrowRight } from "lucide-react";
@@ -76,8 +76,8 @@ function OwnerStep() {
           </Field>
           <Field data-invalid={Boolean(errors.timezone)} className="sm:col-span-2">
             <FieldLabel htmlFor="timezone">{t("timezone")}</FieldLabel>
-            <TimezoneSelect id="timezone" aria-invalid={Boolean(errors.timezone)} aria-describedby={describe("timezone", true, errors.timezone)}
-              {...form.register("timezone", { required: t("chooseTimezone") })} />
+            <Controller control={form.control} name="timezone" rules={{ required: t("chooseTimezone") }} render={({ field }) =>
+              <TimezoneSelect id="timezone" aria-invalid={Boolean(errors.timezone)} aria-describedby={describe("timezone", true, errors.timezone)} {...field} />} />
             <FieldDescription id="timezone-description">{t("timezoneHint")}</FieldDescription>
             {errors.timezone && <FieldError id="timezone-error">{errors.timezone.message}</FieldError>}
           </Field>

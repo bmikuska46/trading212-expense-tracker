@@ -6,7 +6,7 @@ import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClie
 import { tableFeatures, useTable, type ColumnDef } from "@tanstack/react-table";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { useFieldArray, useForm, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
+import { Controller, useFieldArray, useForm, useWatch, type Control, type FieldErrors, type UseFormRegister } from "react-hook-form";
 import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Sparkles, Trash2 } from "lucide-react";
 import {
   commitImport, correctImportRow, deleteImport, getImport, listAccounts, listImportRows, listImports, setImportMapping,
@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { useConfirmImport } from "@/components/notifications";
 import { alertClass, alertDescriptionClass, cellClass, compactFields, footerClass, headClass, legendClass, PanelHeader } from "@/components/panel";
 import { monthName, ScheduledImports } from "@/components/scheduled-imports";
+import { SelectCombobox, type SelectOption } from "@/components/select-combobox";
 import { nextSort, SortHead, type Sort } from "@/components/sortable";
 import { isKind, kinds } from "@/components/transaction-editor";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -30,7 +31,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -105,12 +105,11 @@ function Upload() {
           onSubmit={form.handleSubmit((values) => { setStatus(""); mutation.mutate(values); })}>
           <Field data-invalid={Boolean(errors.accountId)} className="gap-1 sm:w-52">
             <FieldLabel htmlFor="import-account" className="text-xs text-muted-foreground">{t("account")}</FieldLabel>
-            <NativeSelect id="import-account" size="sm" className="w-full" aria-invalid={Boolean(errors.accountId)}
-              aria-describedby={errors.accountId ? "import-account-error" : undefined}
-              {...form.register("accountId", { required: t("chooseAccountError") })}>
-              <NativeSelectOption value="">{t("chooseAccount")}</NativeSelectOption>
-              {usable.map((account) => <NativeSelectOption key={account.id} value={account.id}>{account.name} ({account.currency})</NativeSelectOption>)}
-            </NativeSelect>
+            <Controller control={form.control} name="accountId" rules={{ required: t("chooseAccountError") }} render={({ field }) =>
+              <SelectCombobox id="import-account" size="sm" className="w-full" aria-invalid={Boolean(errors.accountId)}
+                aria-describedby={errors.accountId ? "import-account-error" : undefined} {...field}
+                options={[{ value: "", label: t("chooseAccount") },
+                  ...usable.map((account) => ({ value: String(account.id), label: `${account.name} (${account.currency})` }))]} />} />
             {errors.accountId && <FieldError id="import-account-error" className="text-xs">{errors.accountId.message}</FieldError>}
           </Field>
           <Field data-invalid={Boolean(errors.file)} className="gap-1 sm:flex-1">
@@ -334,19 +333,17 @@ function columnLabels(t: T, header: string[], examples: string[]) {
   });
 }
 
-function ColumnSelect({ id, columns, label, hint, error, none, register, name, required }: {
+function ColumnSelect({ id, columns, label, hint, error, none, control, name, required }: {
   id: string; columns: string[]; label: string; hint?: string; error?: string; none?: string;
-  register: UseFormRegister<Draft>; name: keyof Omit<Draft, "actions" | "currencySource">; required?: string;
+  control: Control<Draft>; name: keyof Omit<Draft, "actions" | "currencySource">; required?: string;
 }) {
   const t = useTranslations("imports");
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
   return <Field data-invalid={Boolean(error)}>
     <FieldLabel htmlFor={id}>{label}</FieldLabel>
-    <NativeSelect size="sm" id={id} className="w-full" aria-invalid={Boolean(error)} aria-describedby={describedBy}
-      {...register(name, required ? { required } : undefined)}>
-      <NativeSelectOption value="">{none ?? t("notInFile")}</NativeSelectOption>
-      {columns.map((column, index) => <NativeSelectOption key={index} value={String(index)}>{column}</NativeSelectOption>)}
-    </NativeSelect>
+    <Controller control={control} name={name} rules={required ? { required } : undefined} render={({ field }) =>
+      <SelectCombobox size="sm" id={id} className="w-full" aria-invalid={Boolean(error)} aria-describedby={describedBy} {...field}
+        options={[{ value: "", label: none ?? t("notInFile") }, ...columns.map((column, index) => ({ value: String(index), label: column }))]} />} />
     {error ? <FieldError id={`${id}-error`}>{error}</FieldError> : hint && <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription>}
   </Field>;
 }
@@ -372,12 +369,10 @@ function Actions({ control, register, errors }: {
         </Field>
         <Field data-invalid={Boolean(kindError)}>
           <FieldLabel htmlFor={`action-kind-${index}`} className="sr-only">{t("meaning", { number: index + 1 })}</FieldLabel>
-          <NativeSelect size="sm" id={`action-kind-${index}`} className="w-full" aria-invalid={Boolean(kindError)}
-            {...register(`actions.${index}.kind`, { required: t("chooseMeaningError") })}>
-            <NativeSelectOption value="">{t("chooseMeaning")}</NativeSelectOption>
-            {kinds.map((value) => <NativeSelectOption key={value} value={value}>{kind(value)}</NativeSelectOption>)}
-            <NativeSelectOption value="skip">{t("skip")}</NativeSelectOption>
-          </NativeSelect>
+          <Controller control={control} name={`actions.${index}.kind`} rules={{ required: t("chooseMeaningError") }} render={({ field }) =>
+            <SelectCombobox size="sm" id={`action-kind-${index}`} className="w-full" aria-invalid={Boolean(kindError)} {...field}
+              options={[{ value: "", label: t("chooseMeaning") }, ...kinds.map((value) => ({ value, label: kind(value) })),
+                { value: "skip", label: t("skip") }]} />} />
           {kindError && <FieldError>{kindError}</FieldError>}
         </Field>
         <Button type="button" variant="ghost" size="icon-sm" aria-label={t("remove", { number: index + 1 })} onClick={() => actions.remove(index)}>
@@ -433,6 +428,8 @@ function MappingForm({ detail, onSaved, report, suggested, suggestError }: Edito
   const form = useForm<Draft>({ defaultValues: toDraft(suggested?.mapping ?? detail.mapping, detail.unknownActions) });
   const { errors } = form.formState;
   const [amountMode, currencySource, actionColumn] = useWatch({ control: form.control, name: ["amountMode", "currencySource", "actionColumn"] });
+  const choice = (id: string, name: "dateFormat" | "timezone" | "amountMode" | "sign" | "decimalSeparator" | "thousandsSeparator" | "currencySource", options: SelectOption[]) =>
+    <Controller control={form.control} name={name} render={({ field }) => <SelectCombobox size="sm" id={id} className="w-full" {...field} options={options} />} />;
   const save = useMutation({
     mutationFn: (draft: Draft) => setImportMapping(detail.id, fromDraft(draft)),
     onSuccess: (next) => { onSaved(next); report(t("saved")); },
@@ -484,76 +481,50 @@ function MappingForm({ detail, onSaved, report, suggested, suggestError }: Edito
       {open && <form noValidate aria-labelledby="mapping-heading" className={cn("flex flex-col gap-5", compactFields)} onSubmit={form.handleSubmit((draft) => save.mutate(draft))}>
         <fieldset className="grid gap-3 sm:grid-cols-3">
           <legend className={cn(legendClass, "mb-2")}>{t("date")}</legend>
-          <ColumnSelect id="map-date" columns={columns} label={t("dateColumn")} none={t("chooseColumn")} register={form.register}
+          <ColumnSelect id="map-date" columns={columns} label={t("dateColumn")} none={t("chooseColumn")} control={form.control}
             name="dateColumn" required={t("chooseDate")} error={errors.dateColumn?.message} />
           <Field>
             <FieldLabel htmlFor="map-date-format">{t("dateOrder")}</FieldLabel>
-            <NativeSelect size="sm" id="map-date-format" className="w-full" {...form.register("dateFormat")}>
-              <NativeSelectOption value="iso">{t("iso")}</NativeSelectOption>
-              <NativeSelectOption value="dmy">{t("dmy")}</NativeSelectOption>
-              <NativeSelectOption value="mdy">{t("mdy")}</NativeSelectOption>
-            </NativeSelect>
+            {choice("map-date-format", "dateFormat", [{ value: "iso", label: t("iso") }, { value: "dmy", label: t("dmy") }, { value: "mdy", label: t("mdy") }])}
           </Field>
           <Field>
             <FieldLabel htmlFor="map-timezone">{t("timezone")}</FieldLabel>
-            <NativeSelect size="sm" id="map-timezone" className="w-full" {...form.register("timezone")}>
-              <NativeSelectOption value="local">{t("local")}</NativeSelectOption>
-              <NativeSelectOption value="utc">{t("utc")}</NativeSelectOption>
-            </NativeSelect>
+            {choice("map-timezone", "timezone", [{ value: "local", label: t("local") }, { value: "utc", label: t("utc") }])}
           </Field>
         </fieldset>
         <fieldset className="grid gap-3 sm:grid-cols-3">
           <legend className={cn(legendClass, "mb-2")}>{t("amount")}</legend>
           <Field>
             <FieldLabel htmlFor="map-amount-mode">{t("amountMode")}</FieldLabel>
-            <NativeSelect size="sm" id="map-amount-mode" className="w-full" {...form.register("amountMode")}>
-              <NativeSelectOption value="single">{t("single")}</NativeSelectOption>
-              <NativeSelectOption value="debit_credit">{t("debitCredit")}</NativeSelectOption>
-            </NativeSelect>
+            {choice("map-amount-mode", "amountMode", [{ value: "single", label: t("single") }, { value: "debit_credit", label: t("debitCredit") }])}
           </Field>
           {amountMode === "single" ? <>
-            <ColumnSelect id="map-amount" columns={columns} label={t("amountColumn")} none={t("chooseColumn")} register={form.register}
+            <ColumnSelect id="map-amount" columns={columns} label={t("amountColumn")} none={t("chooseColumn")} control={form.control}
               name="amountColumn" required={t("chooseAmount")} error={errors.amountColumn?.message} />
             <Field>
               <FieldLabel htmlFor="map-sign">{t("sign")}</FieldLabel>
-              <NativeSelect size="sm" id="map-sign" className="w-full" {...form.register("sign")}>
-                <NativeSelectOption value="negative_is_outflow">{t("negative")}</NativeSelectOption>
-                <NativeSelectOption value="positive_is_outflow">{t("positive")}</NativeSelectOption>
-                <NativeSelectOption value="action_is_direction">{t("actionDirection")}</NativeSelectOption>
-              </NativeSelect>
+              {choice("map-sign", "sign", [{ value: "negative_is_outflow", label: t("negative") }, { value: "positive_is_outflow", label: t("positive") }, { value: "action_is_direction", label: t("actionDirection") }])}
             </Field>
           </> : <>
-            <ColumnSelect id="map-debit" columns={columns} label={t("debit")} none={t("chooseColumn")} register={form.register}
+            <ColumnSelect id="map-debit" columns={columns} label={t("debit")} none={t("chooseColumn")} control={form.control}
               name="debitColumn" required={t("chooseDebit")} error={errors.debitColumn?.message} />
-            <ColumnSelect id="map-credit" columns={columns} label={t("credit")} none={t("chooseColumn")} register={form.register}
+            <ColumnSelect id="map-credit" columns={columns} label={t("credit")} none={t("chooseColumn")} control={form.control}
               name="creditColumn" required={t("chooseCredit")} error={errors.creditColumn?.message} />
           </>}
           <Field>
             <FieldLabel htmlFor="map-decimal">{t("decimal")}</FieldLabel>
-            <NativeSelect size="sm" id="map-decimal" className="w-full" {...form.register("decimalSeparator")}>
-              <NativeSelectOption value=".">{t("pointDecimal")}</NativeSelectOption>
-              <NativeSelectOption value=",">{t("commaDecimal")}</NativeSelectOption>
-            </NativeSelect>
+            {choice("map-decimal", "decimalSeparator", [{ value: ".", label: t("pointDecimal") }, { value: ",", label: t("commaDecimal") }])}
           </Field>
           <Field>
             <FieldLabel htmlFor="map-thousands">{t("thousands")}</FieldLabel>
-            <NativeSelect size="sm" id="map-thousands" className="w-full" {...form.register("thousandsSeparator")}>
-              <NativeSelectOption value="">{t("none")}</NativeSelectOption>
-              <NativeSelectOption value=",">{t("commaThousands")}</NativeSelectOption>
-              <NativeSelectOption value=".">{t("pointThousands")}</NativeSelectOption>
-              <NativeSelectOption value=" ">{t("space")}</NativeSelectOption>
-              <NativeSelectOption value="'">{t("apostrophe")}</NativeSelectOption>
-            </NativeSelect>
+            {choice("map-thousands", "thousandsSeparator", [{ value: "", label: t("none") }, { value: ",", label: t("commaThousands") }, { value: ".", label: t("pointThousands") }, { value: " ", label: t("space") }, { value: "'", label: t("apostrophe") }])}
           </Field>
         </fieldset>
         <fieldset className="grid gap-3 sm:grid-cols-3">
           <legend className={cn(legendClass, "mb-2")}>{t("currency")}</legend>
           <Field>
             <FieldLabel htmlFor="map-currency-source">{t("currencySource")}</FieldLabel>
-            <NativeSelect size="sm" id="map-currency-source" className="w-full" {...form.register("currencySource")}>
-              <NativeSelectOption value="fixed">{t("fixed")}</NativeSelectOption>
-              <NativeSelectOption value="column">{t("fromColumn")}</NativeSelectOption>
-            </NativeSelect>
+            {choice("map-currency-source", "currencySource", [{ value: "fixed", label: t("fixed") }, { value: "column", label: t("fromColumn") }])}
           </Field>
           {currencySource === "fixed" ? <Field data-invalid={Boolean(errors.currencyFixed)}>
             <FieldLabel htmlFor="map-currency">{t("currencyCode")}</FieldLabel>
@@ -561,15 +532,15 @@ function MappingForm({ detail, onSaved, report, suggested, suggestError }: Edito
               {...form.register("currencyFixed", { validate: (value) => /^[A-Za-z]{3}$/.test(value.trim()) || t("enterCode") })} />
             {errors.currencyFixed && <FieldError>{errors.currencyFixed.message}</FieldError>}
           </Field> :
-            <ColumnSelect id="map-currency-column" columns={columns} label={t("currencyColumn")} none={t("chooseColumn")} register={form.register}
+            <ColumnSelect id="map-currency-column" columns={columns} label={t("currencyColumn")} none={t("chooseColumn")} control={form.control}
               name="currencyColumn" required={t("chooseCurrency")} error={errors.currencyColumn?.message} />}
         </fieldset>
         <fieldset className="grid gap-3 sm:grid-cols-3">
           <legend className={cn(legendClass, "mb-2")}>{t("other")}</legend>
           {optionalColumns.map((name) => <ColumnSelect key={name} id={`map-${name}`} columns={columns}
-            label={all(`optional.${name}`)} hint={all(`optional.${name}Hint`)} register={form.register} name={name} />)}
+            label={all(`optional.${name}`)} hint={all(`optional.${name}Hint`)} control={form.control} name={name} />)}
           <ColumnSelect id="map-action" columns={columns} label={t("action")} hint={t("actionHint")}
-            register={form.register} name="actionColumn" />
+            control={form.control} name="actionColumn" />
         </fieldset>
         {actionColumn !== "" && <Actions control={form.control} register={form.register} errors={errors} />}
         <div className="flex flex-wrap gap-2">
@@ -689,12 +660,9 @@ function Rows({ detail, onChanged, report }: { detail: ImportDetail; onChanged: 
   return <Card size="sm" className="gap-0 py-0">
     <PanelHeader id="rows-heading" title={t("rows.title")} count={formatNumber(detail.rowCount)} action={<>
       <label htmlFor="row-filter" className="max-sm:sr-only">{t("rows.show")}</label>
-      <NativeSelect id="row-filter" size="sm" className="w-44" value={filter} onChange={(event) => setFilter(event.target.value as RowStatus | "")}>
-        <NativeSelectOption value="">{t("rows.all", { count: formatNumber(detail.rowCount) })}</NativeSelectOption>
-        {rowFilters.map((status) => <NativeSelectOption key={status} value={status}>
-          {t(`rowStates.${status}`)} ({formatNumber(detail.rowCounts[status] ?? 0)})
-        </NativeSelectOption>)}
-      </NativeSelect>
+      <SelectCombobox id="row-filter" size="sm" className="w-44" value={filter} onChange={(value) => setFilter(value as RowStatus | "")}
+        options={[{ value: "", label: t("rows.all", { count: formatNumber(detail.rowCount) }) },
+          ...rowFilters.map((status) => ({ value: status, label: `${t(`rowStates.${status}`)} (${formatNumber(detail.rowCounts[status] ?? 0)})` }))]} />
     </>} />
     {rows.isPending ? <Loading label={t("rows.loading")} /> :
       rows.isError ? <p role="alert" className="px-3.5 py-3 text-sm text-destructive">{rows.error.message}</p> :

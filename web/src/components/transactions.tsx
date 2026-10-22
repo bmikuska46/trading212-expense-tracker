@@ -9,7 +9,7 @@ import {
   type ColumnDef, type RowSelectionState, type SortingState,
 } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useTranslations } from "next-intl";
 import { ArrowDownToLine, ChevronLeft, ChevronRight, CornerDownLeft, Search, Sparkles, X } from "lucide-react";
 import {
@@ -23,6 +23,7 @@ import { dialogOpen } from "@/components/keyboard-shortcuts";
 import { ConfirmImport } from "@/components/notifications";
 import { PageToolbar } from "@/components/page-toolbar";
 import { cellClass, headClass } from "@/components/panel";
+import { SelectCombobox, type SelectOption } from "@/components/select-combobox";
 import { ariaSort, SortButton } from "@/components/sortable";
 import { Amount, CategoryChip, categoryText, payeeText, shortDate, TransactionBadges, type TransactionsT } from "@/components/transaction-bits";
 import { kinds, RuleOffer, TransactionEditor, type EditorTarget } from "@/components/transaction-editor";
@@ -35,7 +36,6 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -191,8 +191,13 @@ function Filters({ query, accounts, categories, apply }: {
     category: query.category ?? "", kind: query.kind ?? "", review: query.review ?? "" };
   const form = useForm<FilterValues>({ values: current });
   const submit = form.handleSubmit((values) => apply({ ...values, page: undefined }));
-  // Selects apply at once; text and dates apply on submit or blur.
-  const select = (name: keyof FilterValues) => form.register(name, { onChange: () => void submit() });
+  // Choices apply at once and text applies on submit or blur. Picking a date
+  // keeps focus in the field, so a complete date applies on change too. Typed
+  // years pass through 0002, 0020 and 0202 first, which wait for blur.
+  const date = (name: "from" | "to") => form.register(name, {
+    onChange: (event) => { if (/^(|[1-9]\d{3}-\d{2}-\d{2})$/.test(event.target.value)) void submit(); },
+    onBlur: () => void submit(),
+  });
   // The register query reports filters from the address that the server rejects.
   const page = useQuery(registerPage(query));
   const fields: Partial<Record<string, string>> = invalidFields(page.error);
@@ -200,6 +205,10 @@ function Filters({ query, accounts, categories, apply }: {
     "aria-invalid": Boolean(fields[name]),
     "aria-describedby": fields[name] ? `filter-${name}-error` : undefined,
   });
+  const select = (name: "account" | "category" | "kind" | "review", options: SelectOption[]) =>
+    <Controller control={form.control} name={name} render={({ field }) =>
+      <SelectCombobox id={`filter-${name}`} size="sm" options={options} {...invalid(name)} {...field}
+        onChange={(value) => { field.onChange(value); void submit(); }} />} />;
   const error = (name: keyof FilterValues) => fields[name] && <FieldError id={`filter-${name}-error`} className="text-xs">{fields[name]}</FieldError>;
   const filtered = Object.values(summaryQuery(query)).some(Boolean);
   const field = "w-auto shrink-0 gap-1";
@@ -225,48 +234,37 @@ function Filters({ query, accounts, categories, apply }: {
         <InputGroup className="h-7 w-auto">
           <InputGroupAddon><InputGroupText className="font-mono text-[0.6875rem] text-faint uppercase">{t("from")}</InputGroupText></InputGroupAddon>
           <FieldLabel htmlFor="filter-from" className="sr-only">{t("from")}</FieldLabel>
-          <InputGroupInput id="filter-from" type="date" className="w-32 flex-none px-1 font-mono text-xs" {...invalid("from")}
-            {...form.register("from", { onBlur: () => void submit() })} />
+          <InputGroupInput id="filter-from" type="date" className="w-32 flex-none px-1 font-mono text-xs" {...invalid("from")} {...date("from")} />
           <span aria-hidden="true" className="font-mono text-[0.6875rem] text-faint uppercase">{t("to")}</span>
           <FieldLabel htmlFor="filter-to" className="sr-only">{t("toLabel")}</FieldLabel>
-          <InputGroupInput id="filter-to" type="date" className="w-32 flex-none px-1 font-mono text-xs" {...invalid("to")}
-            {...form.register("to", { onBlur: () => void submit() })} />
+          <InputGroupInput id="filter-to" type="date" className="w-32 flex-none px-1 font-mono text-xs" {...invalid("to")} {...date("to")} />
         </InputGroup>
         {error("from")}
         {error("to")}
       </Field>
-      <Field className={field}>
+      <Field className={cn(field, "w-36")}>
         <FieldLabel htmlFor="filter-account" className="sr-only">{t("account")}</FieldLabel>
-        <NativeSelect id="filter-account" size="sm" className="w-36" {...invalid("account")} {...select("account")}>
-          <NativeSelectOption value="">{t("allAccounts")}</NativeSelectOption>
-          {accounts.map((account) => <NativeSelectOption key={account.id} value={account.id}>{account.name}</NativeSelectOption>)}
-        </NativeSelect>
+        {select("account", [{ value: "", label: t("allAccounts") },
+          ...accounts.map((account) => ({ value: String(account.id), label: account.name }))])}
         {error("account")}
       </Field>
-      <Field className={field}>
+      <Field className={cn(field, "w-40")}>
         <FieldLabel htmlFor="filter-category" className="sr-only">{t("category")}</FieldLabel>
-        <NativeSelect id="filter-category" size="sm" className="w-40" {...invalid("category")} {...select("category")}>
-          <NativeSelectOption value="">{t("allCategories")}</NativeSelectOption>
-          {categories.map((category) => <NativeSelectOption key={category.id} value={category.id}>{category.name}</NativeSelectOption>)}
-        </NativeSelect>
+        {select("category", [{ value: "", label: t("allCategories") },
+          ...categories.map((category) => ({ value: String(category.id), label: category.name }))])}
         {error("category")}
       </Field>
-      <Field className={field}>
+      <Field className={cn(field, "w-32")}>
         <FieldLabel htmlFor="filter-kind" className="sr-only">{t("type")}</FieldLabel>
-        <NativeSelect id="filter-kind" size="sm" className="w-32" {...invalid("kind")} {...select("kind")}>
-          <NativeSelectOption value="">{t("allTypes")}</NativeSelectOption>
-          {kinds.map((value) => <NativeSelectOption key={value} value={value}>{kind(value)}</NativeSelectOption>)}
-        </NativeSelect>
+        {select("kind", [{ value: "", label: t("allTypes") }, ...kinds.map((value) => ({ value, label: kind(value) }))])}
         {error("kind")}
       </Field>
-      <Field className={field}>
+      <Field className={cn(field, "w-36")}>
         <FieldLabel htmlFor="filter-review" className="sr-only">{t("review")}</FieldLabel>
-        <NativeSelect id="filter-review" size="sm" className="w-36" {...invalid("review")} {...select("review")}>
-          <NativeSelectOption value="">{t("anyReview")}</NativeSelectOption>
-          <NativeSelectOption value="needs_review">{t("needsReview")}</NativeSelectOption>
-          <NativeSelectOption value="source_conflict">{t("sourceChanged")}</NativeSelectOption>
-          <NativeSelectOption value="confirmed">{t("reviewed")}</NativeSelectOption>
-        </NativeSelect>
+        {select("review", [
+          { value: "", label: t("anyReview") }, { value: "needs_review", label: t("needsReview") },
+          { value: "source_conflict", label: t("sourceChanged") }, { value: "confirmed", label: t("reviewed") },
+        ])}
         {error("review")}
       </Field>
       {query.payee && <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={() => apply({ payee: undefined, page: undefined })}>
@@ -310,10 +308,9 @@ function BulkBar({ selected, accounts, categories, clear, report }: {
       <form className="flex items-center" onSubmit={form.handleSubmit((values) => values.categoryId && run({ action: "update", categoryId: Number(values.categoryId) }))}>
         <label htmlFor="bulk-category" className="sr-only">{t("category")}</label>
         <ButtonGroup>
-          <NativeSelect id="bulk-category" size="sm" className="w-40" {...form.register("categoryId")}>
-            <NativeSelectOption value="">{t("setCategory")}</NativeSelectOption>
-            {categories.map((category) => <NativeSelectOption key={category.id} value={category.id}>{category.name}</NativeSelectOption>)}
-          </NativeSelect>
+          <Controller control={form.control} name="categoryId" render={({ field }) =>
+            <SelectCombobox id="bulk-category" size="sm" className="w-40" {...field} options={[{ value: "", label: t("setCategory") },
+              ...categories.map((category) => ({ value: String(category.id), label: category.name }))]} />} />
           <Button size="sm" type="submit" variant="outline" disabled={mutation.isPending}>{t("set")}</Button>
         </ButtonGroup>
       </form>
@@ -327,11 +324,10 @@ function BulkBar({ selected, accounts, categories, clear, report }: {
       <form className="flex items-center" onSubmit={form.handleSubmit((values) => values.accountId && run({ action: "update", accountId: Number(values.accountId) }))}>
         <label htmlFor="bulk-account" className="sr-only">{t("account")}</label>
         <ButtonGroup>
-          <NativeSelect id="bulk-account" size="sm" className="w-40" {...form.register("accountId")}>
-            <NativeSelectOption value="">{t("moveTo")}</NativeSelectOption>
-            {accounts.filter((account) => !account.archived && account.currency === "EUR").map((account) =>
-              <NativeSelectOption key={account.id} value={account.id}>{account.name}</NativeSelectOption>)}
-          </NativeSelect>
+          <Controller control={form.control} name="accountId" render={({ field }) =>
+            <SelectCombobox id="bulk-account" size="sm" className="w-40" {...field} options={[{ value: "", label: t("moveTo") },
+              ...accounts.filter((account) => !account.archived && account.currency === "EUR")
+                .map((account) => ({ value: String(account.id), label: account.name }))]} />} />
           <Button size="sm" type="submit" variant="outline" disabled={mutation.isPending}>{t("move")}</Button>
         </ButtonGroup>
       </form>
@@ -482,9 +478,9 @@ function Register({ query, apply, accounts, categories, edit, report, keyboard }
       <nav aria-label={t("register.pages")} className="flex items-center gap-3">
         <span className="flex items-center gap-2">
           <label htmlFor="page-size" className="max-sm:sr-only">{t("register.rows")}</label>
-          <NativeSelect id="page-size" size="sm" value={String(pageSize)} onChange={(event) => apply({ pageSize: event.target.value, page: undefined })}>
-            {[25, 50, 100, 200].map((size) => <NativeSelectOption key={size} value={size}>{size}</NativeSelectOption>)}
-          </NativeSelect>
+          <SelectCombobox id="page-size" size="sm" className="w-20" value={String(pageSize)}
+            options={[25, 50, 100, 200].map((size) => ({ value: String(size), label: String(size) }))}
+            onChange={(value) => apply({ pageSize: value, page: undefined })} />
         </span>
         <span className="font-mono">{formatNumber(current)}/{formatNumber(pages)}</span>
         <ButtonGroup>

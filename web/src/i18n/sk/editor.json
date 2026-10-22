@@ -49,6 +49,7 @@
   "convertedHint": "Prepočítané na EUR uloženým kurzom, preto sa suma nedá zmeniť.",
   "payee": "Príjemca",
   "payeeHint": "Nový názov vytvorí nového príjemcu. Rovnocenné zápisy použijú existujúceho.",
+  "createPayee": "Vytvoriť príjemcu „{name}“",
   "category": "Kategória",
   "sameAsPurchase": "Rovnaká ako pri nákupe",
   "uncategorized": "Bez kategórie",

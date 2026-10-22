@@ -18,5 +18,6 @@
   "cancel": "Cancel",
   "saving": "Saving",
   "loading": "Loading",
-  "actions": "Actions"
+  "actions": "Actions",
+  "noMatches": "No matches"
 }

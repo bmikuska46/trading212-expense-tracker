@@ -5,12 +5,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { tableFeatures, useTable, type ColumnDef } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { createAccount, listAccounts, listCurrencies, type Account } from "@/lib/api";
 import { formatEURCents, formatMoney, formatNumber } from "@/lib/format";
 import { showServerErrors } from "@/lib/forms";
 import { cn } from "@/lib/utils";
 import { cellClass, PanelHeader } from "@/components/panel";
+import { SelectCombobox } from "@/components/select-combobox";
 import { SortHead, useSort } from "@/components/sortable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -90,10 +90,10 @@ function CreateAccount() {
           </Field>
           <Field data-invalid={Boolean(errors.currency)} className="w-24 gap-1">
             <FieldLabel htmlFor="account-currency" className="text-xs text-muted-foreground">{t("currency")}</FieldLabel>
-            <NativeSelect id="account-currency" size="sm" className="w-full font-mono" aria-invalid={Boolean(errors.currency)}
-              aria-describedby={errors.currency ? "account-currency-error" : undefined} {...form.register("currency")}>
-              {(currencies.data ?? ["EUR"]).map((code) => <NativeSelectOption key={code} value={code}>{code}</NativeSelectOption>)}
-            </NativeSelect>
+            <Controller control={form.control} name="currency" render={({ field }) =>
+              <SelectCombobox id="account-currency" size="sm" className="w-full font-mono" aria-invalid={Boolean(errors.currency)}
+                aria-describedby={errors.currency ? "account-currency-error" : undefined} {...field}
+                options={(currencies.data ?? ["EUR"]).map((code) => ({ value: code, label: code }))} />} />
             {errors.currency && <FieldError id="account-currency-error">{errors.currency.message}</FieldError>}
           </Field>
         </div>
