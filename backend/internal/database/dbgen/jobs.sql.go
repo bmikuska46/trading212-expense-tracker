@@ -157,7 +157,7 @@ func (q *Queries) EnsureMonthlyJob(ctx context.Context, arg EnsureMonthlyJobPara
 }
 
 const getMonthlyJob = `-- name: GetMonthlyJob :one
-SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to FROM scheduled_jobs WHERE kind = 'monthly_import' AND source_account_id = ? AND period_key = ?
+SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to, report_from FROM scheduled_jobs WHERE kind = 'monthly_import' AND source_account_id = ? AND period_key = ?
 `
 
 type GetMonthlyJobParams struct {
@@ -189,6 +189,7 @@ func (q *Queries) GetMonthlyJob(ctx context.Context, arg GetMonthlyJobParams) (S
 		&i.RetryCount,
 		&i.ReportRequestedAt,
 		&i.ReportTo,
+		&i.ReportFrom,
 	)
 	return i, err
 }
@@ -205,7 +206,7 @@ func (q *Queries) GetOwnerTimezone(ctx context.Context) (string, error) {
 }
 
 const getScheduledJob = `-- name: GetScheduledJob :one
-SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to FROM scheduled_jobs WHERE id = ?
+SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to, report_from FROM scheduled_jobs WHERE id = ?
 `
 
 func (q *Queries) GetScheduledJob(ctx context.Context, id int64) (ScheduledJob, error) {
@@ -232,6 +233,7 @@ func (q *Queries) GetScheduledJob(ctx context.Context, id int64) (ScheduledJob, 
 		&i.RetryCount,
 		&i.ReportRequestedAt,
 		&i.ReportTo,
+		&i.ReportFrom,
 	)
 	return i, err
 }
@@ -244,8 +246,8 @@ WHERE import_batches.source_account_id = ? AND import_batches.status = 'committe
 `
 
 // Rows the owner excluded or corrected in a committed import into the account.
-// Daily syncs request the month from its start, so they leave these out
-// instead of asking about them again.
+// A rerun requests the month from its start, so it leaves these out instead
+// of asking about them again.
 func (q *Queries) HandledReportRows(ctx context.Context, sourceAccountID int64) ([]string, error) {
 	rows, err := q.db.QueryContext(ctx, handledReportRows, sourceAccountID)
 	if err != nil {
@@ -270,7 +272,7 @@ func (q *Queries) HandledReportRows(ctx context.Context, sourceAccountID int64) 
 }
 
 const jobForBatch = `-- name: JobForBatch :one
-SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to FROM scheduled_jobs WHERE batch_id = ? ORDER BY id DESC LIMIT 1
+SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to, report_from FROM scheduled_jobs WHERE batch_id = ? ORDER BY id DESC LIMIT 1
 `
 
 func (q *Queries) JobForBatch(ctx context.Context, batchID sql.NullInt64) (ScheduledJob, error) {
@@ -297,6 +299,7 @@ func (q *Queries) JobForBatch(ctx context.Context, batchID sql.NullInt64) (Sched
 		&i.RetryCount,
 		&i.ReportRequestedAt,
 		&i.ReportTo,
+		&i.ReportFrom,
 	)
 	return i, err
 }
@@ -365,7 +368,7 @@ func (q *Queries) LatestJobAttempts(ctx context.Context, arg LatestJobAttemptsPa
 }
 
 const listMonthlyJobs = `-- name: ListMonthlyJobs :many
-SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to FROM scheduled_jobs WHERE kind = 'monthly_import' ORDER BY period_key DESC, id DESC LIMIT ?1
+SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to, report_from FROM scheduled_jobs WHERE kind = 'monthly_import' ORDER BY period_key DESC, id DESC LIMIT ?1
 `
 
 func (q *Queries) ListMonthlyJobs(ctx context.Context, pageSize int64) ([]ScheduledJob, error) {
@@ -398,6 +401,7 @@ func (q *Queries) ListMonthlyJobs(ctx context.Context, pageSize int64) ([]Schedu
 			&i.RetryCount,
 			&i.ReportRequestedAt,
 			&i.ReportTo,
+			&i.ReportFrom,
 		); err != nil {
 			return nil, err
 		}
@@ -413,7 +417,7 @@ func (q *Queries) ListMonthlyJobs(ctx context.Context, pageSize int64) ([]Schedu
 }
 
 const listPartialMonthlyJobs = `-- name: ListPartialMonthlyJobs :many
-SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to FROM scheduled_jobs
+SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to, report_from FROM scheduled_jobs
 WHERE kind = 'monthly_import' AND source_account_id = ? AND period_key >= ? AND state = 'completed' AND
     (report_to IS NULL OR report_to < period_end_utc)
 `
@@ -455,6 +459,7 @@ func (q *Queries) ListPartialMonthlyJobs(ctx context.Context, arg ListPartialMon
 			&i.RetryCount,
 			&i.ReportRequestedAt,
 			&i.ReportTo,
+			&i.ReportFrom,
 		); err != nil {
 			return nil, err
 		}
@@ -470,7 +475,7 @@ func (q *Queries) ListPartialMonthlyJobs(ctx context.Context, arg ListPartialMon
 }
 
 const nextMonthlyJob = `-- name: NextMonthlyJob :one
-SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to FROM scheduled_jobs
+SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to, report_from FROM scheduled_jobs
 WHERE kind = 'monthly_import' AND source_account_id = ? AND state NOT IN ('completed', 'failed', 'canceled')
 ORDER BY period_key LIMIT 1
 `
@@ -500,6 +505,7 @@ func (q *Queries) NextMonthlyJob(ctx context.Context, sourceAccountID sql.NullIn
 		&i.RetryCount,
 		&i.ReportRequestedAt,
 		&i.ReportTo,
+		&i.ReportFrom,
 	)
 	return i, err
 }
@@ -525,18 +531,21 @@ func (q *Queries) PreviousMonthlyBatch(ctx context.Context, arg PreviousMonthlyB
 
 const rerunMonthlyJob = `-- name: RerunMonthlyJob :execrows
 UPDATE scheduled_jobs SET state = 'pending', report_id = NULL, report_status = NULL, report_requested_at = NULL,
-    report_to = NULL, batch_id = NULL, retry_count = 0,
-    next_attempt_at = ?, last_error_code = NULL, last_error_detail = NULL, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-WHERE id = ? AND state IN ('completed', 'failed', 'canceled')
+    report_from = ?1, report_to = NULL, batch_id = NULL, retry_count = 0,
+    next_attempt_at = ?2, last_error_code = NULL, last_error_detail = NULL,
+    updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+WHERE id = ?3 AND state IN ('completed', 'failed', 'canceled')
 `
 
 type RerunMonthlyJobParams struct {
+	ReportFrom    sql.NullString
 	NextAttemptAt string
 	ID            int64
 }
 
+// A rerun reports from report_from, or from the month's start when it is NULL.
 func (q *Queries) RerunMonthlyJob(ctx context.Context, arg RerunMonthlyJobParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, rerunMonthlyJob, arg.NextAttemptAt, arg.ID)
+	result, err := q.db.ExecContext(ctx, rerunMonthlyJob, arg.ReportFrom, arg.NextAttemptAt, arg.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -544,7 +553,7 @@ func (q *Queries) RerunMonthlyJob(ctx context.Context, arg RerunMonthlyJobParams
 }
 
 const saveMonthlyJob = `-- name: SaveMonthlyJob :exec
-UPDATE scheduled_jobs SET state = ?, report_id = ?, report_status = ?, report_requested_at = ?, report_to = ?,
+UPDATE scheduled_jobs SET state = ?, report_id = ?, report_status = ?, report_requested_at = ?, report_from = ?, report_to = ?,
     batch_id = ?, retry_count = ?, next_attempt_at = ?, last_error_code = ?, last_error_detail = ?,
     updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 WHERE id = ?
@@ -555,6 +564,7 @@ type SaveMonthlyJobParams struct {
 	ReportID          sql.NullString
 	ReportStatus      sql.NullString
 	ReportRequestedAt sql.NullString
+	ReportFrom        sql.NullString
 	ReportTo          sql.NullString
 	BatchID           sql.NullInt64
 	RetryCount        int64
@@ -570,6 +580,7 @@ func (q *Queries) SaveMonthlyJob(ctx context.Context, arg SaveMonthlyJobParams) 
 		arg.ReportID,
 		arg.ReportStatus,
 		arg.ReportRequestedAt,
+		arg.ReportFrom,
 		arg.ReportTo,
 		arg.BatchID,
 		arg.RetryCount,

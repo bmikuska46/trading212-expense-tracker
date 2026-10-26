@@ -331,7 +331,7 @@ func TestMonthBoundsAcrossDST(t *testing.T) {
 	}
 }
 
-func TestMonthRowsFilterHalfOpenMonth(t *testing.T) {
+func TestReportRowsFilterHalfOpenRange(t *testing.T) {
 	start, end, _ := MonthBounds("2026-10")
 	report := "Action,Time (UTC),ID,Total,Currency (Total)\n" +
 		"Deposit,2026-09-30 21:59:59,before,1.00,EUR\n" +
@@ -342,7 +342,7 @@ func TestMonthRowsFilterHalfOpenMonth(t *testing.T) {
 		"Deposit,2026-10-31 22:59:59,last,1.00,EUR\n" +
 		"Deposit,2026-10-31 23:00:00,after,1.00,EUR\n" +
 		"Deposit,not a time,unreadable,1.00,EUR\n"
-	filtered, count, err := monthRows([]byte(report), start, end, nil)
+	filtered, count, err := reportRows([]byte(report), start, end, nil)
 	if err != nil || count != 5 {
 		t.Fatalf("count = %d, %v", count, err)
 	}
@@ -509,7 +509,7 @@ func TestMonthlyImportSyncsDaily(t *testing.T) {
 		t.Fatalf("batch = %+v, %v", batch, err)
 	}
 
-	// Each day the month is requested again from its start.
+	// Each day only the days since the last sync are requested.
 	h.run(at("2026-08-03", 6, 0), at("2026-08-03", 7, 0))
 	if job := h.monthJob("2026-08"); job.State != stateCompleted || job.ReportTo.String != "2026-08-02T22:00:00Z" {
 		t.Fatalf("job = %+v", job)
@@ -531,17 +531,20 @@ func TestMonthlyImportSyncsDaily(t *testing.T) {
 	h.run(at("2026-09-02", 6, 0), at("2026-09-03", 7, 0))
 	want := []string{
 		"2026-07-31T21:00:00Z 2026-08-01T23:00:00Z",
-		"2026-07-31T21:00:00Z 2026-08-02T23:00:00Z",
-		"2026-07-31T21:00:00Z 2026-08-05T23:00:00Z",
-		"2026-07-31T21:00:00Z 2026-08-31T23:00:00Z",
+		"2026-08-01T21:00:00Z 2026-08-02T23:00:00Z",
+		"2026-08-02T21:00:00Z 2026-08-05T23:00:00Z",
+		"2026-08-05T21:00:00Z 2026-08-31T23:00:00Z",
 		"2026-08-31T21:00:00Z 2026-09-01T23:00:00Z",
-		"2026-08-31T21:00:00Z 2026-09-02T23:00:00Z",
+		"2026-09-01T21:00:00Z 2026-09-02T23:00:00Z",
 	}
 	if got := posts(); !slices.Equal(got, want) {
 		t.Fatalf("requests = %v", got)
 	}
 	if h.count("SELECT count(*) FROM notification_events") != 0 {
 		t.Fatal("a daily sync notified")
+	}
+	if dupes := h.count("SELECT coalesce(sum(duplicate_count), 0) FROM import_batches"); dupes != 0 {
+		t.Fatalf("daily syncs staged %d duplicates", dupes)
 	}
 	// Only the syncs that added transactions keep a batch.
 	if batches := h.count("SELECT count(*) FROM import_batches WHERE inserted_count > 0"); batches != 4 ||
@@ -553,7 +556,7 @@ func TestMonthlyImportSyncsDaily(t *testing.T) {
 	}
 }
 
-func TestDailySyncSkipsRowsTheOwnerHandled(t *testing.T) {
+func TestRerunSkipsRowsTheOwnerHandled(t *testing.T) {
 	h := newMonthlyHarness(t, "2026-08")
 	ctx := context.Background()
 	h.fake.status = integrations.ReportFinished
@@ -585,8 +588,12 @@ func TestDailySyncSkipsRowsTheOwnerHandled(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The next day's report still has the row, but the sync leaves it out.
-	h.run(at("2026-08-03", 6, 0), at("2026-08-03", 7, 0))
+	// A rerun's report still has the row, but the import leaves it out.
+	h.now = at("2026-08-03", 9, 0)
+	if started, err := Rerun(ctx, h.store.Queries, h.account, "2026-08", h.now); err != nil || !started {
+		t.Fatalf("rerun = %v, %v", started, err)
+	}
+	h.run(h.now, at("2026-08-03", 10, 0))
 	synced := h.monthJob("2026-08")
 	if synced.State != stateCompleted || synced.ReportTo.String != "2026-08-02T22:00:00Z" || synced.BatchID != job.BatchID {
 		t.Fatalf("job = %+v", synced)

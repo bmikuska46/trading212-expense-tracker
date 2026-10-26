@@ -38,7 +38,7 @@ WHERE kind = 'monthly_import' AND state NOT IN ('completed', 'failed', 'canceled
 RETURNING id;
 
 -- name: SaveMonthlyJob :exec
-UPDATE scheduled_jobs SET state = ?, report_id = ?, report_status = ?, report_requested_at = ?, report_to = ?,
+UPDATE scheduled_jobs SET state = ?, report_id = ?, report_status = ?, report_requested_at = ?, report_from = ?, report_to = ?,
     batch_id = ?, retry_count = ?, next_attempt_at = ?, last_error_code = ?, last_error_detail = ?,
     updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
 WHERE id = ?;
@@ -66,11 +66,13 @@ SELECT CAST(coalesce(max(called_at), '') AS TEXT) AS started_at FROM (
     FROM investment_income_state
 );
 
+-- A rerun reports from report_from, or from the month's start when it is NULL.
 -- name: RerunMonthlyJob :execrows
 UPDATE scheduled_jobs SET state = 'pending', report_id = NULL, report_status = NULL, report_requested_at = NULL,
-    report_to = NULL, batch_id = NULL, retry_count = 0,
-    next_attempt_at = ?, last_error_code = NULL, last_error_detail = NULL, updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-WHERE id = ? AND state IN ('completed', 'failed', 'canceled');
+    report_from = sqlc.narg(report_from), report_to = NULL, batch_id = NULL, retry_count = 0,
+    next_attempt_at = sqlc.arg(next_attempt_at), last_error_code = NULL, last_error_detail = NULL,
+    updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
+WHERE id = sqlc.arg(id) AND state IN ('completed', 'failed', 'canceled');
 
 -- A monthly import that stopped for the owner's attention completes when the
 -- owner commits its batch.
@@ -108,8 +110,8 @@ AND NOT EXISTS (SELECT 1 FROM scheduled_jobs WHERE scheduled_jobs.batch_id = imp
 AND NOT EXISTS (SELECT 1 FROM notification_events WHERE notification_events.batch_id = import_batches.id);
 
 -- Rows the owner excluded or corrected in a committed import into the account.
--- Daily syncs request the month from its start, so they leave these out
--- instead of asking about them again.
+-- A rerun requests the month from its start, so it leaves these out instead
+-- of asking about them again.
 -- name: HandledReportRows :many
 SELECT DISTINCT staging_rows.raw_record_json FROM staging_rows
 JOIN import_batches ON import_batches.id = staging_rows.batch_id

@@ -343,6 +343,7 @@ type ScheduledJob struct {
 	RetryCount        int64
 	ReportRequestedAt sql.NullString
 	ReportTo          sql.NullString
+	ReportFrom        sql.NullString
 }
 
 type Session struct {

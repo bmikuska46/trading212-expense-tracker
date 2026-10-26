@@ -39,8 +39,8 @@ const (
 	// before, Europe/Bratislava time. On the 1st that finishes the previous
 	// month.
 	DailyHour = 6
-	// The requested range is widened on both sides; rows outside the month
-	// are dropped before staging.
+	// The requested range is widened on both sides; rows outside it are
+	// dropped before staging.
 	reportOverlap = time.Hour
 	// maxRetries bounds consecutive transient failures of one job.
 	maxRetries = 10
@@ -54,10 +54,10 @@ const (
 )
 
 // Monthly keeps one job per month of Trading 212 transactions. Every day at
-// 06:00 it requests the month's report through the day before, waits for
-// it, and imports the new transactions without a review. Its state lives in
-// scheduled_jobs, so a restart resumes where it stopped. One job runs at a
-// time and shares the import pipeline with the app.
+// 06:00 it requests a report from where the last one ended through the day
+// before, waits for it, and imports the new transactions without a review.
+// Its state lives in scheduled_jobs, so a restart resumes where it stopped.
+// One job runs at a time and shares the import pipeline with the app.
 type Monthly struct {
 	Store   *database.Store
 	Client  *integrations.Client
@@ -148,6 +148,16 @@ func syncThrough(now, end time.Time) time.Time {
 	return end
 }
 
+// syncedFrom is where a job's current or last report starts, or the month's
+// start.
+func syncedFrom(job dbgen.ScheduledJob) time.Time {
+	if from, err := time.Parse(time.RFC3339, job.ReportFrom.String); err == nil {
+		return from
+	}
+	start, _ := time.Parse(time.RFC3339, job.PeriodStartUtc.String)
+	return start
+}
+
 // syncedThrough is where a job's last report ended, or the month's start.
 func syncedThrough(job dbgen.ScheduledJob) time.Time {
 	if through, err := time.Parse(time.RFC3339, job.ReportTo.String); err == nil {
@@ -226,7 +236,8 @@ func (m *Monthly) Step(ctx context.Context) (time.Time, error) {
 		if now.Before(RunAfter(syncedThrough(job))) {
 			continue
 		}
-		if _, err := q.RerunMonthlyJob(ctx, dbgen.RerunMonthlyJobParams{NextAttemptAt: stamp(now).String, ID: job.ID}); err != nil {
+		if _, err := q.RerunMonthlyJob(ctx, dbgen.RerunMonthlyJobParams{ReportFrom: job.ReportTo,
+			NextAttemptAt: stamp(now).String, ID: job.ID}); err != nil {
 			return time.Time{}, err
 		}
 	}
@@ -259,8 +270,8 @@ func (m *Monthly) ensure(ctx context.Context, account sql.NullInt64, period stri
 }
 
 // Rerun schedules a month again right away, from its start. Existing
-// transaction IDs are skipped as duplicates, so a rerun or a daily sync never
-// duplicates rows. It returns false when the month's job is still running.
+// transaction IDs are skipped as duplicates, so a rerun never duplicates rows.
+// It returns false when the month's job is still running.
 func Rerun(ctx context.Context, q *dbgen.Queries, account int64, period string, now time.Time) (bool, error) {
 	key := sql.NullInt64{Int64: account, Valid: true}
 	job, err := q.GetMonthlyJob(ctx, dbgen.GetMonthlyJobParams{SourceAccountID: key, PeriodKey: period})
@@ -298,7 +309,7 @@ func (m *Monthly) advance(ctx context.Context, job dbgen.ScheduledJob, source mo
 func (m *Monthly) save(ctx context.Context, q *dbgen.Queries, job dbgen.ScheduledJob) error {
 	return q.SaveMonthlyJob(ctx, dbgen.SaveMonthlyJobParams{
 		State: job.State, ReportID: job.ReportID, ReportStatus: job.ReportStatus, ReportRequestedAt: job.ReportRequestedAt,
-		ReportTo: job.ReportTo, BatchID: job.BatchID, RetryCount: job.RetryCount, NextAttemptAt: job.NextAttemptAt,
+		ReportFrom: job.ReportFrom, ReportTo: job.ReportTo, BatchID: job.BatchID, RetryCount: job.RetryCount, NextAttemptAt: job.NextAttemptAt,
 		LastErrorCode: job.LastErrorCode, LastErrorDetail: job.LastErrorDetail, ID: job.ID,
 	})
 }
@@ -365,11 +376,10 @@ func (m *Monthly) call(ctx context.Context, job dbgen.ScheduledJob, stage string
 	return callErr
 }
 
-// reportRange is the requested range: the month from its start through
-// report_to, with a small overlap.
+// reportRange is the requested range, report_from through report_to, with a
+// small overlap.
 func reportRange(job dbgen.ScheduledJob) (time.Time, time.Time) {
-	start, _ := time.Parse(time.RFC3339, job.PeriodStartUtc.String)
-	return start.Add(-reportOverlap), syncedThrough(job).Add(reportOverlap)
+	return syncedFrom(job).Add(-reportOverlap), syncedThrough(job).Add(reportOverlap)
 }
 
 // matching finds the newest usable report for a range.
@@ -514,10 +524,10 @@ func (m *Monthly) poll(ctx context.Context, job dbgen.ScheduledJob, source month
 	return m.stage(ctx, job, data)
 }
 
-// monthRows keeps the header and the rows whose time falls in [start, end),
+// reportRows keeps the header and the rows whose time falls in [start, end),
 // leaving out the rows the owner already handled. Rows without a readable
 // time stay, so validation reports them.
-func monthRows(data []byte, start, end time.Time, handled map[string]bool) ([]byte, int, error) {
+func reportRows(data []byte, start, end time.Time, handled map[string]bool) ([]byte, int, error) {
 	reader, err := imports.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, 0, err
@@ -575,8 +585,6 @@ func (m *Monthly) location(ctx context.Context) *time.Location {
 }
 
 func (m *Monthly) stage(ctx context.Context, job dbgen.ScheduledJob, data []byte) error {
-	start, _ := time.Parse(time.RFC3339, job.PeriodStartUtc.String)
-	end, _ := time.Parse(time.RFC3339, job.PeriodEndUtc.String)
 	rows, err := m.Store.Queries.HandledReportRows(ctx, job.SourceAccountID.Int64)
 	if err != nil {
 		return err
@@ -585,7 +593,8 @@ func (m *Monthly) stage(ctx context.Context, job dbgen.ScheduledJob, data []byte
 	for _, row := range rows {
 		handled[row] = true
 	}
-	filtered, count, err := monthRows(data, start, end, handled)
+	// The overlap belongs to the neighbouring syncs and months.
+	filtered, count, err := reportRows(data, syncedFrom(job), syncedThrough(job), handled)
 	if err != nil {
 		return m.fail(ctx, job, "unreadable_report", "The report is not a CSV file this app can read.")
 	}

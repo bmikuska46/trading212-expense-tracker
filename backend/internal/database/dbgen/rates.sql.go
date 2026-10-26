@@ -141,7 +141,7 @@ func (q *Queries) FinishRatesJob(ctx context.Context, arg FinishRatesJobParams) 
 }
 
 const getRatesJob = `-- name: GetRatesJob :one
-SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to FROM scheduled_jobs WHERE kind = 'daily_rates' AND period_key = ?
+SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to, report_from FROM scheduled_jobs WHERE kind = 'daily_rates' AND period_key = ?
 `
 
 func (q *Queries) GetRatesJob(ctx context.Context, periodKey string) (ScheduledJob, error) {
@@ -168,6 +168,7 @@ func (q *Queries) GetRatesJob(ctx context.Context, periodKey string) (ScheduledJ
 		&i.RetryCount,
 		&i.ReportRequestedAt,
 		&i.ReportTo,
+		&i.ReportFrom,
 	)
 	return i, err
 }
