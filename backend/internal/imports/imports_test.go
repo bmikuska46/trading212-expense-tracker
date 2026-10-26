@@ -283,8 +283,8 @@ func TestTrading212Mapping(t *testing.T) {
 	if !ok || len(mapping.Validate(header)) != 0 {
 		t.Fatalf("trading 212: %v %v", ok, mapping.Validate(header))
 	}
-	if _, ok := Trading212(append(slices.Clone(header), "Extra")); ok {
-		t.Fatal("an unknown column must not match the built-in mapping")
+	if extra, ok := Trading212(append([]string{"Exchange rate"}, header...)); !ok || *extra.ActionColumn != 1 || *extra.Currency.Column != 6 {
+		t.Fatalf("other columns must be ignored: %v %+v", ok, extra)
 	}
 	if _, ok := Trading212(header[:4]); ok {
 		t.Fatal("missing required columns must not match")
@@ -331,7 +331,7 @@ func TestCompleteTrading212ActionsPreservesExplicitMapping(t *testing.T) {
 			t.Fatalf("%s received built-in actions", name)
 		}
 	}
-	for _, unknown := range [][]string{append(slices.Clone(header), "Extra"), {"Action", "Date", "Amount"}} {
+	for _, unknown := range [][]string{header[:5], {"Action", "Date", "Amount"}} {
 		if got := completeBuiltinActions(unknown, mapping); got.Canonical() != mapping.Canonical() {
 			t.Fatal("an unverified header received built-in actions")
 		}

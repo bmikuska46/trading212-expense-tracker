@@ -219,6 +219,34 @@ func TestTrading212HistoricalRateFailureCanBeRetried(t *testing.T) {
 	}
 }
 
+func TestTrading212ExportWithExtraColumnsSkipsCashbackAndConverts(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `[{"date":"2026-08-03","base":"EUR","quote":"USD","rate":1.25}]`)
+	}))
+	defer server.Close()
+	app := newTestApp(t, Options{})
+	pipeline := imports.New(app.store)
+	pipeline.Rates = &rates.Client{URL: server.URL, HTTP: server.Client()}
+	app.options.Imports = pipeline
+	var err error
+	app.handler, err = New(app.store, filepath.Join(app.directory, "web"), app.options)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cookie := app.setup()
+	account := app.account(cookie, "Trading 212")
+	file := "Action,Time (UTC),Notes,ID,Total,Currency (Total),Merchant name,Merchant category,Exchange rate\n" +
+		"Spending cashback,2026-08-03 09:00:00,,extra-1,0.12,USD,,,\n" +
+		"Card debit,2026-08-03 10:00:00,,extra-2,-12.50,USD,Store,RETAIL_STORES,\n"
+	staged := app.imported(cookie, account, "extra.csv", []byte(file))
+	if staged.ErrorCount != 0 || staged.ExcludedCount != 1 || staged.RowCounts[imports.RowValid] != 1 || len(staged.UnknownActions) != 0 {
+		t.Fatalf("extra column export: %+v %+v", staged, app.stagedRows(cookie, staged.ID, "invalid"))
+	}
+	if record := app.stagedRows(cookie, staged.ID, "valid")[0].Record; record.Conversion == nil || record.Conversion.EURCents != -1000 {
+		t.Fatalf("USD row must convert to the EUR account: %+v", record)
+	}
+}
+
 func TestEURConversionIntegrityRejectsMismatchedLedgerAmounts(t *testing.T) {
 	app := newTestApp(t, Options{})
 	cookie := app.setup()

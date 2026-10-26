@@ -244,20 +244,13 @@ func ParseMapping(data []byte) (Mapping, error) {
 
 func column(index int) *int { return &index }
 
-// trading212Columns lists the verified Trading 212 card export columns.
-// The conversion fee columns appear only in some exports.
-var trading212Columns = []string{"Action", "Time (UTC)", "Notes", "ID", "Total", "Currency (Total)",
-	"Currency conversion fee", "Currency (Currency conversion fee)", "Merchant name", "Merchant category"}
-
-// Trading212 returns the built-in mapping when the header matches the
-// Trading 212 export. Unfamiliar actions stay unmapped so their rows need
-// an explicit interpretation.
+// Trading212 returns the built-in mapping when the header has the Trading
+// 212 export columns. Trading 212 adds columns depending on the rows in the
+// report, so other columns are ignored. Unfamiliar actions stay unmapped so
+// their rows need an explicit interpretation.
 func Trading212(header []string) (Mapping, bool) {
 	positions := map[string]int{}
 	for index, name := range header {
-		if !slices.Contains(trading212Columns, name) {
-			return Mapping{}, false
-		}
 		positions[name] = index
 	}
 	for _, required := range []string{"Action", "Time (UTC)", "ID", "Total", "Currency (Total)"} {

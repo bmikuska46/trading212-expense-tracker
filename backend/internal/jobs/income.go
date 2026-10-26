@@ -496,7 +496,7 @@ func (i *Income) cashbackFailed(ctx context.Context, now time.Time, err error) e
 	if !errors.As(err, &failed) || ctx.Err() != nil {
 		return err
 	}
-	slog.Warn("cashback report failed", "code", failed.Code, "permanent", failed.Permanent)
+	slog.Warn("cashback report failed", "code", failed.Code, "detail", failed.Detail, "permanent", failed.Permanent)
 	next := now.Add(incomeRetry)
 	if failed.Permanent {
 		next = now.Add(CashbackInterval)
