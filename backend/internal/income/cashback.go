@@ -23,8 +23,12 @@ type Cashback struct {
 }
 
 // ParseCashback reads the cashback rows of a Trading 212 transactions
-// report, such as "Spending cashback", and skips every other row.
+// report, such as "Spending cashback", and skips every other row. Trading 212
+// sends an empty file for a range without transactions.
 func ParseCashback(data []byte) ([]Cashback, error) {
+	if len(bytes.TrimSpace(data)) == 0 {
+		return nil, nil
+	}
 	reader, err := imports.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, err

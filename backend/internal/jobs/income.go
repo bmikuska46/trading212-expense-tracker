@@ -20,12 +20,9 @@ import (
 )
 
 const (
-	// IncomeInterval is how often dividend and interest history and NBS
-	// rates are read again.
-	IncomeInterval = 12 * time.Hour
-	// CashbackInterval is how often a cashback report is requested.
-	CashbackInterval = 24 * time.Hour
-	incomeRetry      = 15 * time.Minute
+	// RatesInterval is how often the NBS rates are read again.
+	RatesInterval = 12 * time.Hour
+	incomeRetry   = 15 * time.Minute
 	// Recent history is read again, so records Trading 212 adds late are
 	// still found. Records are saved once, so overlaps change nothing.
 	historyOverlap  = 7 * 24 * time.Hour
@@ -44,7 +41,8 @@ const (
 // and from lending shares.
 var interestTypes = []string{"INTEREST_ON_FREE_CASH", "LENDING_INTEREST"}
 
-// Income imports dividends, interest, and cashback from Trading 212, from the
+// Income imports dividends, interest, and cashback from Trading 212 on the
+// 1st of each month at IncomeHour and right after a key is saved, from the
 // 1st of January of the year of the first sync, and keeps the NBS rates the
 // tax conversion needs. Dividends and interest come from the paged history
 // endpoints; cashback is only in transaction reports.
@@ -219,7 +217,7 @@ func (i *Income) history(ctx context.Context, credentials integrations.Trading21
 			return err
 		}
 	}
-	next := now.Add(IncomeInterval)
+	next := monthlyAt(now, IncomeHour)
 	if len(details) > 0 {
 		slog.Warn("investment income history incomplete", "permanent", permanent)
 		if !permanent {
@@ -450,7 +448,13 @@ func (i *Income) pollCashback(ctx context.Context, credentials integrations.Trad
 	}
 	credits, err := income.ParseCashback(data)
 	if err != nil {
-		return drop("The cashback report is not a CSV file this app can read.")
+		// The same report would fail again, so it waits for the next month.
+		slog.Warn("cashback report is unreadable", "bytes", len(data), "error", err)
+		if err := q.DropIncomeReport(ctx); err != nil {
+			return err
+		}
+		return i.cashbackFailed(ctx, now, &integrations.ReportError{Code: "report_unreadable", Permanent: true,
+			Detail: "The cashback report is not a CSV file this app can read."})
 	}
 	return i.saveCashback(ctx, credits, start, now)
 }
@@ -480,7 +484,7 @@ func (i *Income) saveCashback(ctx context.Context, credits []income.Cashback, st
 		return err
 	}
 	if err := q.RecordIncomeCashback(ctx, dbgen.RecordIncomeCashbackParams{CashbackAttemptAt: stamp(now),
-		CashbackNextAt: stamp(now.Add(CashbackInterval))}); err != nil {
+		CashbackNextAt: stamp(monthlyAt(now, IncomeHour))}); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
@@ -499,7 +503,7 @@ func (i *Income) cashbackFailed(ctx context.Context, now time.Time, err error) e
 	slog.Warn("cashback report failed", "code", failed.Code, "detail", failed.Detail, "permanent", failed.Permanent)
 	next := now.Add(incomeRetry)
 	if failed.Permanent {
-		next = now.Add(CashbackInterval)
+		next = monthlyAt(now, IncomeHour)
 	}
 	return i.Store.Queries.RecordIncomeCashback(ctx, dbgen.RecordIncomeCashbackParams{CashbackAttemptAt: stamp(now),
 		CashbackError: nullString(failed.Detail), CashbackNextAt: stamp(next)})
@@ -622,7 +626,7 @@ func (i *Income) refreshRates(ctx context.Context, now time.Time) error {
 			return err
 		}
 	}
-	next := now.Add(IncomeInterval)
+	next := now.Add(RatesInterval)
 	if failure != "" {
 		slog.Warn("NBS rates incomplete")
 		next = now.Add(incomeRetry)

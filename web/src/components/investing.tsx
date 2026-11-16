@@ -611,7 +611,7 @@ export function Investing() {
     queryKey: ["investing", range],
     queryFn: ({ signal }) => getInvesting(range, { signal }),
     placeholderData: keepPreviousData,
-    // Snapshots arrive hourly; a few minutes keeps an open page current.
+    // The first snapshot lands within a minute of saving a key, so the page polls.
     refetchInterval: 5 * 60_000,
   });
   const data = investing.data;
@@ -659,7 +659,7 @@ export function Investing() {
             {!data.configured
               ? t("empty.connectBody")
               : data.lastAttemptAt
-                ? t("empty.hourly")
+                ? t("empty.daily")
                 : t("empty.first")}
           </EmptyDescription>
         </EmptyHeader>

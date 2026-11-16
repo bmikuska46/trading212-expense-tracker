@@ -234,7 +234,7 @@ func TestIncomeImportsTheYear(t *testing.T) {
 	state := h.state()
 	if state.StartedOn.String != "2026-01-01" || state.DividendsSyncedAt.String != "2026-10-01T10:00:00Z" ||
 		state.InterestSyncedAt.String != "2026-10-01T10:00:00Z" || state.HistoryError.Valid ||
-		state.HistoryNextAt.String != "2026-10-01T22:00:00Z" {
+		state.HistoryNextAt.String != "2026-11-01T02:00:00Z" {
 		t.Fatalf("state %+v", state)
 	}
 	// The cashback report starts at midnight in Bratislava.
@@ -302,20 +302,25 @@ func TestIncomeImportsTheYear(t *testing.T) {
 		t.Fatalf("next %v, want %v", next, want)
 	}
 
-	// Later reads stop a week before the last one and keep the past.
-	nbsBefore := h.history.count("nbs")
-	h.step(start.Add(IncomeInterval))
-	if h.history.count("dividends:") != 3 || h.history.count("dividends:2") != 1 {
-		t.Fatalf("the second read must stop on the first page: %v", h.history.requests)
-	}
-	// Only the unfinished month is read again.
+	// The NBS rates are read again later, only for the unfinished month.
+	nbsBefore, dividendsBefore := h.history.count("nbs"), h.history.count("dividends:")
+	h.step(start.Add(RatesInterval))
 	if h.history.count("nbs") != nbsBefore+1 || h.history.count("/exchange-rate-month/2026-10/csv") != 2 {
 		t.Fatalf("NBS requests %v", h.history.requests)
 	}
+	// Trading 212 income waits for 03:00 on the 1st of the next month.
+	if state := h.state(); h.history.count("dividends:") != dividendsBefore || state.ReportFrom.Valid ||
+		state.HistoryNextAt.String != "2026-11-01T02:00:00Z" || state.CashbackNextAt.String != "2026-11-01T02:00:00Z" {
+		t.Fatalf("income read before the month ended: %+v %v", state, h.history.requests)
+	}
 
-	// The next cashback report overlaps the last one by three days.
-	h.step(polled.Add(CashbackInterval))
-	if state := h.state(); state.ReportFrom.String != "2026-09-28T10:00:00Z" || state.ReportTo.String != "2026-10-02T10:01:01Z" {
+	// Then reads stop a week before the last one and keep the past, and the
+	// next cashback report overlaps the last one by three days.
+	h.step(time.Date(2026, 11, 1, 2, 0, 0, 0, time.UTC))
+	if h.history.count("dividends:") != dividendsBefore+1 || h.history.count("dividends:2") != 1 {
+		t.Fatalf("the second read must stop on the first page: %v", h.history.requests)
+	}
+	if state := h.state(); state.ReportFrom.String != "2026-09-28T10:00:00Z" || state.ReportTo.String != "2026-11-01T02:00:00Z" {
 		t.Fatalf("second report %+v", state)
 	}
 }
@@ -326,7 +331,7 @@ func TestIncomeKeepsInterestWhenDividendsAreForbidden(t *testing.T) {
 	h.step(h.now)
 	state := h.state()
 	if state.DividendsSyncedAt.Valid || !state.InterestSyncedAt.Valid || !strings.Contains(state.HistoryError.String, "Dividend history") ||
-		state.HistoryNextAt.String != "2026-10-01T22:00:00Z" {
+		state.HistoryNextAt.String != "2026-11-01T02:00:00Z" {
 		t.Fatalf("state %+v", state)
 	}
 	if found := h.income(); len(found) != 2 {
@@ -409,7 +414,7 @@ func TestIncomeReadsAnnualRatesOnceTheYearEnds(t *testing.T) {
 		t.Fatalf("informative %+v", row)
 	}
 	// Every file is complete, so nothing is read again.
-	h.step(start.Add(IncomeInterval))
+	h.step(start.Add(RatesInterval))
 	if h.history.count("nbs") != 14 {
 		t.Fatalf("NBS requests %v", h.history.requests)
 	}

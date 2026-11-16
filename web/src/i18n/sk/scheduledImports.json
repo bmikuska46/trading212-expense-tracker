@@ -29,5 +29,5 @@
   "actions": "Akcie",
   "open": "Otvoriť import",
   "rerun": "Importovať znova",
-  "footer": "Každý deň o 06:00 si server vyžiada od Trading 212 výpis za aktuálny mesiac do predchádzajúceho dňa a nové transakcie naimportuje bez kontroly. 1. dňa v mesiaci dokončí predchádzajúci mesiac."
+  "footer": "Každý deň o 01:00 si server vyžiada od Trading 212 výpis za aktuálny mesiac do predchádzajúceho dňa a nové transakcie naimportuje bez kontroly. 1. dňa v mesiaci dokončí predchádzajúci mesiac."
 }

@@ -29,5 +29,5 @@
   "actions": "Actions",
   "open": "Open the import",
   "rerun": "Import again",
-  "footer": "Every day at 06:00 the server asks Trading 212 for the current month up to the day before and imports the new transactions without a review. On the 1st it finishes the previous month."
+  "footer": "Every day at 01:00 the server asks Trading 212 for the current month up to the day before and imports the new transactions without a review. On the 1st it finishes the previous month."
 }

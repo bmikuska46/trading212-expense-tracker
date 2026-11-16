@@ -114,7 +114,7 @@
     "deleteGroup": "Delete {name}",
     "pies": "Pies in {name}"
   },
-  "footnote": "Amounts are in {currency}, as Trading 212 reports them. {count, plural, one {# snapshot in {range}} other {# snapshots in {range}}}, the latest {latest}. A snapshot is taken every hour.",
+  "footnote": "Amounts are in {currency}, as Trading 212 reports them. {count, plural, one {# snapshot in {range}} other {# snapshots in {range}}}, the latest {latest}. A snapshot is taken every day at 02:00.",
   "tryAgain": "Try again",
   "failed": {
     "title": "The latest snapshot did not complete",
@@ -127,9 +127,9 @@
   "empty": {
     "none": "No snapshots in {range}",
     "connect": "Connect Trading 212",
-    "connectBody": "Save a Trading 212 API key with the Account data and Pies read permissions. The portfolio is then recorded every hour.",
-    "hourly": "Snapshots are taken every hour. Choose a longer range to see older ones.",
-    "first": "The first snapshot is taken within a minute of saving the key, then every hour.",
+    "connectBody": "Save a Trading 212 API key with the Account data and Pies read permissions. The portfolio is then recorded every day at 02:00.",
+    "daily": "A snapshot is taken every day at 02:00. Choose a longer range to see older ones.",
+    "first": "The first snapshot is taken within a minute of saving the key, then every day at 02:00.",
     "openSettings": "Open Settings",
     "showAll": "Show all time"
   },

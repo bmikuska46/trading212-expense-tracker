@@ -336,7 +336,7 @@ func TestScheduledImportsAndFailureNotifications(t *testing.T) {
 	ctx := context.Background()
 
 	status := decode[scheduledImportsView](t, app.expect(http.StatusOK, "GET", "/api/scheduled-imports", nil, cookie))
-	if status.Enabled || len(status.Jobs) != 0 || status.NextRunAt != "2026-09-16T04:00:00Z" || status.Timezone != "Europe/Bratislava" {
+	if status.Enabled || len(status.Jobs) != 0 || status.NextRunAt != "2026-09-15T23:00:00Z" || status.Timezone != "Europe/Bratislava" {
 		t.Fatalf("status: %+v", status)
 	}
 	if response := app.request("POST", "/api/scheduled-imports/2026-08/run", nil, cookie); response.Code != http.StatusConflict {

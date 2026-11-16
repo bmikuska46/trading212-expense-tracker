@@ -418,8 +418,9 @@ func (q *Queries) ListMonthlyJobs(ctx context.Context, pageSize int64) ([]Schedu
 
 const listPartialMonthlyJobs = `-- name: ListPartialMonthlyJobs :many
 SELECT id, kind, source_account_id, period_key, timezone, period_start_utc, period_end_utc, state, report_id, report_status, batch_id, attempt_count, next_attempt_at, last_error_code, last_error_detail, created_at, updated_at, retry_count, report_requested_at, report_to, report_from FROM scheduled_jobs
-WHERE kind = 'monthly_import' AND source_account_id = ? AND period_key >= ? AND state = 'completed' AND
-    (report_to IS NULL OR report_to < period_end_utc)
+WHERE kind = 'monthly_import' AND source_account_id = ? AND period_key >= ? AND (
+    (state = 'completed' AND (report_to IS NULL OR report_to < period_end_utc)) OR
+    (state = 'failed' AND coalesce(last_error_code, '') != 'needs_attention'))
 `
 
 type ListPartialMonthlyJobsParams struct {
@@ -428,7 +429,8 @@ type ListPartialMonthlyJobsParams struct {
 }
 
 // Completed months that are not imported through their end yet are synced
-// again every day.
+// again every day, and failed months are tried again. A month that waits for
+// the owner to commit its batch is left to them.
 func (q *Queries) ListPartialMonthlyJobs(ctx context.Context, arg ListPartialMonthlyJobsParams) ([]ScheduledJob, error) {
 	rows, err := q.db.QueryContext(ctx, listPartialMonthlyJobs, arg.SourceAccountID, arg.PeriodKey)
 	if err != nil {

@@ -104,10 +104,10 @@ func run() error {
 
 // tenant wires the jobs of one user's ledger. The rate job fetches once now
 // and then daily at 18:00 Europe/Bratislava. The monthly import job requests
-// Trading 212 reports at 06:00 every day, the notification job emails import
-// events, the investing job snapshots the Trading 212 portfolio hourly, and
-// the income job imports dividends, interest, and cashback with the NBS rates
-// to convert them. TypeSafe and Resend settings come from the main database.
+// Trading 212 reports at 01:00 every day, the notification job emails import
+// events, the investing job snapshots the Trading 212 portfolio at 02:00 every
+// day, and the income job imports dividends, interest, and cashback at 03:00 on
+// the 1st of each month, with the NBS rates to convert them. TypeSafe and Resend settings come from the main database.
 func tenant(ctx context.Context, client *integrations.Client, main *database.Store, user tenants.User, store *database.Store) (*tenants.Tenant, error) {
 	// Uploads interrupted by a stop can never finish; fail them cleanly.
 	if recovered, err := imports.Recover(ctx, store); err != nil {

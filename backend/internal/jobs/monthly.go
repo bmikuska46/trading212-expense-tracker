@@ -35,10 +35,6 @@ const (
 )
 
 const (
-	// DailyHour is when each day the open month is synced through the day
-	// before, Europe/Bratislava time. On the 1st that finishes the previous
-	// month.
-	DailyHour = 6
 	// The requested range is widened on both sides; rows outside it are
 	// dropped before staging.
 	reportOverlap = time.Hour
@@ -54,7 +50,7 @@ const (
 )
 
 // Monthly keeps one job per month of Trading 212 transactions. Every day at
-// 06:00 it requests a report from where the last one ended through the day
+// 01:00 it requests a report from where the last one ended through the day
 // before, waits for it, and imports the new transactions without a review.
 // Its state lives in scheduled_jobs, so a restart resumes where it stopped.
 // One job runs at a time and shares the import pipeline with the app.
@@ -114,28 +110,21 @@ func MonthBounds(period string) (time.Time, time.Time, error) {
 	return start.UTC(), start.AddDate(0, 1, 0).UTC(), nil
 }
 
-// RunAfter is 06:00 Europe/Bratislava on the day after the one an instant
+// RunAfter is DailyHour Europe/Bratislava on the day after the one an instant
 // falls on: the first daily run that can sync past it.
 func RunAfter(instant time.Time) time.Time {
 	local := instant.In(rates.Location)
 	return time.Date(local.Year(), local.Month(), local.Day()+1, DailyHour, 0, 0, 0, rates.Location)
 }
 
-// FirstRunAt is when a month is first synced: 06:00 on its 2nd day.
+// FirstRunAt is when a month is first synced: DailyHour on its 2nd day.
 func FirstRunAt(period string) time.Time {
 	start, _, _ := MonthBounds(period)
 	return RunAfter(start)
 }
 
-// NextDailyRun is the next 06:00 after now.
-func NextDailyRun(now time.Time) time.Time {
-	local := now.In(rates.Location)
-	today := time.Date(local.Year(), local.Month(), local.Day(), DailyHour, 0, 0, 0, rates.Location)
-	if today.After(now) {
-		return today
-	}
-	return RunAfter(now)
-}
+// NextDailyRun is the next DailyHour after now.
+func NextDailyRun(now time.Time) time.Time { return dailyAt(now, DailyHour) }
 
 // syncThrough is where a report requested now may end: the start of the
 // local day, so that with the overlap the range is in the past, but never
@@ -233,10 +222,17 @@ func (m *Monthly) Step(ctx context.Context) (time.Time, error) {
 		return time.Time{}, err
 	}
 	for _, job := range partial {
-		if now.Before(RunAfter(syncedThrough(job))) {
+		from, due := job.ReportTo, RunAfter(syncedThrough(job))
+		if job.State == stateFailed {
+			// A failed sync is tried again over the same range at the next
+			// daily run, so a passing problem needs no rerun from the owner.
+			failed, _ := time.Parse(time.RFC3339, job.NextAttemptAt)
+			from, due = job.ReportFrom, NextDailyRun(failed)
+		}
+		if now.Before(due) {
 			continue
 		}
-		if _, err := q.RerunMonthlyJob(ctx, dbgen.RerunMonthlyJobParams{ReportFrom: job.ReportTo,
+		if _, err := q.RerunMonthlyJob(ctx, dbgen.RerunMonthlyJobParams{ReportFrom: from,
 			NextAttemptAt: stamp(now).String, ID: job.ID}); err != nil {
 			return time.Time{}, err
 		}
@@ -526,8 +522,12 @@ func (m *Monthly) poll(ctx context.Context, job dbgen.ScheduledJob, source month
 
 // reportRows keeps the header and the rows whose time falls in [start, end),
 // leaving out the rows the owner already handled. Rows without a readable
-// time stay, so validation reports them.
+// time stay, so validation reports them. Trading 212 sends an empty file for
+// a range without transactions.
 func reportRows(data []byte, start, end time.Time, handled map[string]bool) ([]byte, int, error) {
+	if len(bytes.TrimSpace(data)) == 0 {
+		return nil, 0, nil
+	}
 	reader, err := imports.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, 0, err
@@ -596,6 +596,7 @@ func (m *Monthly) stage(ctx context.Context, job dbgen.ScheduledJob, data []byte
 	// The overlap belongs to the neighbouring syncs and months.
 	filtered, count, err := reportRows(data, syncedFrom(job), syncedThrough(job), handled)
 	if err != nil {
+		slog.Warn("monthly report is unreadable", "period", job.PeriodKey, "bytes", len(data), "error", err)
 		return m.fail(ctx, job, "unreadable_report", "The report is not a CSV file this app can read.")
 	}
 	if count == 0 {
@@ -721,6 +722,11 @@ func (m *Monthly) complete(ctx context.Context, job dbgen.ScheduledJob) error {
 		job.BatchID = sql.NullInt64{Int64: previous, Valid: err == nil}
 	}
 	if err := m.save(ctx, q, job); err != nil {
+		return err
+	}
+	// A failure that a later attempt got past is resolved.
+	if err := q.DismissJobFailure(ctx, dbgen.DismissJobFailureParams{DismissedAt: stamp(m.Now()),
+		JobID: sql.NullInt64{Int64: job.ID, Valid: true}}); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {

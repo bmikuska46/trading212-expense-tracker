@@ -19,11 +19,13 @@ WHERE kind = 'monthly_import' AND source_account_id = ? AND state NOT IN ('compl
 ORDER BY period_key LIMIT 1;
 
 -- Completed months that are not imported through their end yet are synced
--- again every day.
+-- again every day, and failed months are tried again. A month that waits for
+-- the owner to commit its batch is left to them.
 -- name: ListPartialMonthlyJobs :many
 SELECT * FROM scheduled_jobs
-WHERE kind = 'monthly_import' AND source_account_id = ? AND period_key >= ? AND state = 'completed' AND
-    (report_to IS NULL OR report_to < period_end_utc);
+WHERE kind = 'monthly_import' AND source_account_id = ? AND period_key >= ? AND (
+    (state = 'completed' AND (report_to IS NULL OR report_to < period_end_utc)) OR
+    (state = 'failed' AND coalesce(last_error_code, '') != 'needs_attention'));
 
 -- name: ListMonthlyJobs :many
 SELECT * FROM scheduled_jobs WHERE kind = 'monthly_import' ORDER BY period_key DESC, id DESC LIMIT sqlc.arg(page_size);

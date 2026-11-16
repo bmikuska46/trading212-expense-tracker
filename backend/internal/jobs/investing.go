@@ -14,14 +14,13 @@ import (
 )
 
 const (
-	// InvestingInterval is how often the portfolio is snapshotted.
-	InvestingInterval = time.Hour
-	investingRetry    = 5 * time.Minute
-	pieNameMaxAge     = 24 * time.Hour
+	investingRetry = 5 * time.Minute
+	pieNameMaxAge  = 24 * time.Hour
 )
 
-// Investing saves an hourly snapshot of the Trading 212 account and its pies
-// whenever a key is saved, then refreshes pie names that are a day old.
+// Investing saves a snapshot of the Trading 212 account and its pies every
+// day at SnapshotHour, and right away when there is none yet, then refreshes
+// pie names that are a day old.
 type Investing struct {
 	Store  *database.Store
 	Client *integrations.Client
@@ -100,8 +99,8 @@ func Trading212Credentials(ctx context.Context, q *dbgen.Queries) (integrations.
 		Sync: integrations.Trading212SyncOrAll(stored.Sync)}, row, true, nil
 }
 
-// Step saves a snapshot when the last one is an interval old and returns
-// when the next step should run.
+// Step saves a snapshot when no snapshot was taken since the last
+// SnapshotHour and returns when the next step should run.
 func (i *Investing) Step(ctx context.Context) (time.Time, error) {
 	now := i.Now()
 	q := i.Store.Queries
@@ -114,8 +113,7 @@ func (i *Investing) Step(ctx context.Context) (time.Time, error) {
 		return time.Time{}, err
 	}
 	if last, err := time.Parse(time.RFC3339, latest); err == nil {
-		// A restart shortly before the hour reuses the last snapshot.
-		if due := last.Add(InvestingInterval); now.Before(due.Add(-time.Minute)) {
+		if due := dailyAt(last, SnapshotHour); now.Before(due) {
 			return due, nil
 		}
 	}
@@ -137,10 +135,10 @@ func (i *Investing) Step(ctx context.Context) (time.Time, error) {
 		if failed == nil && credentials.Sync.Pies {
 			i.refreshNames(ctx, credentials)
 		}
-		return now.Add(InvestingInterval), nil
+		return dailyAt(now, SnapshotHour), nil
 	}
 	if failed.Permanent {
-		return now.Add(InvestingInterval), nil
+		return dailyAt(now, SnapshotHour), nil
 	}
 	return now.Add(investingRetry), nil
 }

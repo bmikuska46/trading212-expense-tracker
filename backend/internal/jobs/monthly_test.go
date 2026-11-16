@@ -130,7 +130,8 @@ func (f *fakeTrading212) serve(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// inRange keeps the rows of a report whose time is within its range.
+// inRange keeps the rows of a report whose time is within its range. Like
+// Trading 212, it sends an empty file when no row is.
 func inRange(report, from, to string) string {
 	rows, err := csv.NewReader(strings.NewReader(report)).ReadAll()
 	if err != nil || len(rows) == 0 {
@@ -141,11 +142,16 @@ func inRange(report, from, to string) string {
 	var out strings.Builder
 	writer := csv.NewWriter(&out)
 	_ = writer.Write(rows[0])
+	kept := 0
 	for _, row := range rows[1:] {
 		at, err := time.Parse(time.DateTime, row[column])
 		if err == nil && !at.Before(start) && !at.After(end) {
 			_ = writer.Write(row)
+			kept++
 		}
+	}
+	if kept == 0 {
+		return ""
 	}
 	writer.Flush()
 	return out.String()
@@ -296,10 +302,10 @@ func TestMonthBoundsAcrossDST(t *testing.T) {
 		period, start, end, firstRun string
 	}{
 		// Summer time starts on 29 March and ends on 25 October 2026.
-		{"2026-03", "2026-02-28T23:00:00Z", "2026-03-31T22:00:00Z", "2026-03-02T05:00:00Z"},
-		{"2026-08", "2026-07-31T22:00:00Z", "2026-08-31T22:00:00Z", "2026-08-02T04:00:00Z"},
-		{"2026-10", "2026-09-30T22:00:00Z", "2026-10-31T23:00:00Z", "2026-10-02T04:00:00Z"},
-		{"2026-12", "2026-11-30T23:00:00Z", "2026-12-31T23:00:00Z", "2026-12-02T05:00:00Z"},
+		{"2026-03", "2026-02-28T23:00:00Z", "2026-03-31T22:00:00Z", "2026-03-02T00:00:00Z"},
+		{"2026-08", "2026-07-31T22:00:00Z", "2026-08-31T22:00:00Z", "2026-08-01T23:00:00Z"},
+		{"2026-10", "2026-09-30T22:00:00Z", "2026-10-31T23:00:00Z", "2026-10-01T23:00:00Z"},
+		{"2026-12", "2026-11-30T23:00:00Z", "2026-12-31T23:00:00Z", "2026-12-02T00:00:00Z"},
 	}
 	for _, c := range cases {
 		start, end, err := MonthBounds(c.period)
@@ -314,17 +320,17 @@ func TestMonthBoundsAcrossDST(t *testing.T) {
 		t.Fatal("invalid month accepted")
 	}
 
-	expectTime(t, NextDailyRun(at("2026-09-30", 12, 0)), at("2026-10-01", 6, 0))
-	expectTime(t, NextDailyRun(at("2026-10-01", 5, 59)), at("2026-10-01", 6, 0))
-	expectTime(t, NextDailyRun(at("2026-10-01", 6, 0)), at("2026-10-02", 6, 0))
-	expectTime(t, NextDailyRun(at("2026-10-24", 23, 0)), at("2026-10-25", 6, 0))
-	expectTime(t, NextDailyRun(at("2026-12-31", 23, 0)), at("2027-01-01", 6, 0))
+	expectTime(t, NextDailyRun(at("2026-09-30", 12, 0)), at("2026-10-01", 1, 0))
+	expectTime(t, NextDailyRun(at("2026-10-01", 0, 59)), at("2026-10-01", 1, 0))
+	expectTime(t, NextDailyRun(at("2026-10-01", 1, 0)), at("2026-10-02", 1, 0))
+	expectTime(t, NextDailyRun(at("2026-10-24", 23, 0)), at("2026-10-25", 1, 0))
+	expectTime(t, NextDailyRun(at("2026-12-31", 23, 0)), at("2027-01-01", 1, 0))
 
-	if due := DuePeriods("2026-06", at("2026-09-02", 5, 59)); !slices.Equal(due, []string{"2026-06", "2026-07", "2026-08"}) {
-		t.Fatalf("due before 06:00 = %v", due)
+	if due := DuePeriods("2026-06", at("2026-09-02", 0, 59)); !slices.Equal(due, []string{"2026-06", "2026-07", "2026-08"}) {
+		t.Fatalf("due before 01:00 = %v", due)
 	}
-	if due := DuePeriods("2026-06", at("2026-09-02", 6, 0)); !slices.Equal(due, []string{"2026-06", "2026-07", "2026-08", "2026-09"}) {
-		t.Fatalf("due at 06:00 = %v", due)
+	if due := DuePeriods("2026-06", at("2026-09-02", 1, 0)); !slices.Equal(due, []string{"2026-06", "2026-07", "2026-08", "2026-09"}) {
+		t.Fatalf("due at 01:00 = %v", due)
 	}
 	if due := DuePeriods("2026-10", at("2026-10-01", 12, 0)); len(due) != 0 {
 		t.Fatalf("a month is due on its 1st: %v", due)
@@ -362,8 +368,8 @@ func TestMonthlyImportLifecycle(t *testing.T) {
 	h := newMonthlyHarness(t, "2026-08")
 	ctx := context.Background()
 
-	// At 06:00 on the 1st all of August is requested with a one-hour overlap, transactions only.
-	h.step(at("2026-09-01", 6, 0))
+	// At 01:00 on the 1st all of August is requested with a one-hour overlap, transactions only.
+	h.step(at("2026-09-01", 1, 0))
 	if h.fake.count("POST") != 1 {
 		t.Fatalf("posts = %d", h.fake.count("POST"))
 	}
@@ -379,27 +385,27 @@ func TestMonthlyImportLifecycle(t *testing.T) {
 		t.Fatalf("job = %+v", job)
 	}
 	// The report list is not called before a minute has passed.
-	expectTime(t, h.step(at("2026-09-01", 6, 0).Add(30*time.Second)), at("2026-09-01", 6, 1))
+	expectTime(t, h.step(at("2026-09-01", 1, 0).Add(30*time.Second)), at("2026-09-01", 1, 1))
 	if h.fake.count("GET") != 0 {
 		t.Fatal("listed too early")
 	}
 
 	// A restart resumes polling the saved report without requesting another.
 	h.restart()
-	h.step(at("2026-09-01", 6, 1))
+	h.step(at("2026-09-01", 1, 1))
 	if job := h.monthJob("2026-08"); job.State != statePolling || job.ReportStatus.String != integrations.ReportQueued {
 		t.Fatalf("job = %+v", job)
 	}
 	h.fake.setStatus(integrations.ReportProcessing)
 	h.restart()
-	h.step(at("2026-09-01", 6, 2).Add(time.Second))
+	h.step(at("2026-09-01", 1, 2).Add(time.Second))
 	if h.fake.count("POST") != 1 || h.fake.count("GET") != 2 {
 		t.Fatalf("posts = %d, lists = %d", h.fake.count("POST"), h.fake.count("GET"))
 	}
 
 	// The finished report is downloaded, filtered to August, and committed.
 	h.fake.setStatus(integrations.ReportFinished)
-	h.step(at("2026-09-01", 6, 4))
+	h.step(at("2026-09-01", 1, 4))
 	job = h.monthJob("2026-08")
 	if job.State != stateCompleted || !job.BatchID.Valid || job.ReportStatus.String != integrations.ReportFinished {
 		t.Fatalf("job = %+v", job)
@@ -431,7 +437,7 @@ func TestMonthlyImportLifecycle(t *testing.T) {
 
 	// The completed month is not requested again, and September waits for
 	// its first daily sync.
-	expectTime(t, h.step(at("2026-09-01", 7, 0)), at("2026-09-02", 6, 0))
+	expectTime(t, h.step(at("2026-09-01", 2, 0)), at("2026-09-02", 1, 0))
 	if h.fake.count("POST") != 1 {
 		t.Fatal("completed month requested again")
 	}
@@ -491,12 +497,12 @@ func TestMonthlyImportSyncsDaily(t *testing.T) {
 		return ranges
 	}
 
-	// August is first synced at 06:00 on the 2nd, through the 1st.
-	expectTime(t, h.step(at("2026-08-02", 5, 0)), at("2026-08-02", 6, 0))
+	// August is first synced at 01:00 on the 2nd, through the 1st.
+	expectTime(t, h.step(at("2026-08-02", 0, 0)), at("2026-08-02", 1, 0))
 	if len(posts()) != 0 {
 		t.Fatal("requested before the first run")
 	}
-	expectTime(t, h.run(at("2026-08-02", 6, 0), at("2026-08-02", 7, 0)), at("2026-08-03", 6, 0))
+	expectTime(t, h.run(at("2026-08-02", 1, 0), at("2026-08-02", 2, 0)), at("2026-08-03", 1, 0))
 	job := h.monthJob("2026-08")
 	if job.State != stateCompleted || job.ReportTo.String != "2026-08-01T22:00:00Z" {
 		t.Fatalf("job = %+v", job)
@@ -510,25 +516,25 @@ func TestMonthlyImportSyncsDaily(t *testing.T) {
 	}
 
 	// Each day only the days since the last sync are requested.
-	h.run(at("2026-08-03", 6, 0), at("2026-08-03", 7, 0))
+	h.run(at("2026-08-03", 1, 0), at("2026-08-03", 2, 0))
 	if job := h.monthJob("2026-08"); job.State != stateCompleted || job.ReportTo.String != "2026-08-02T22:00:00Z" {
 		t.Fatalf("job = %+v", job)
 	}
 	// Missed days are caught up by the next run.
-	h.run(at("2026-08-06", 6, 0), at("2026-08-06", 7, 0))
+	h.run(at("2026-08-06", 1, 0), at("2026-08-06", 2, 0))
 	if ids := h.externalIDs(); !slices.Equal(ids, []string{"t212-deposit", "t212-first"}) {
 		t.Fatalf("ids = %v", ids)
 	}
 
 	// On the 1st the month is synced through its end and then left alone.
-	h.run(at("2026-09-01", 6, 0), at("2026-09-01", 7, 0))
+	h.run(at("2026-09-01", 1, 0), at("2026-09-01", 2, 0))
 	if job := h.monthJob("2026-08"); job.State != stateCompleted || job.ReportTo.String != job.PeriodEndUtc.String {
 		t.Fatalf("job = %+v", job)
 	}
 	if ids := h.externalIDs(); !slices.Equal(ids, []string{"t212-deposit", "t212-first", "t212-last"}) {
 		t.Fatalf("ids = %v", ids)
 	}
-	h.run(at("2026-09-02", 6, 0), at("2026-09-03", 7, 0))
+	h.run(at("2026-09-02", 1, 0), at("2026-09-03", 2, 0))
 	want := []string{
 		"2026-07-31T21:00:00Z 2026-08-01T23:00:00Z",
 		"2026-08-01T21:00:00Z 2026-08-02T23:00:00Z",
@@ -563,10 +569,15 @@ func TestRerunSkipsRowsTheOwnerHandled(t *testing.T) {
 	h.fake.csv = augustReport + "Unknown action,2026-08-01 10:00:00,,t212-unmapped,-5.00,EUR,Shop,RETAIL_STORES\n"
 
 	// An unknown action stops the first sync for the owner.
-	h.run(at("2026-08-02", 6, 0), at("2026-08-02", 7, 0))
+	h.run(at("2026-08-02", 1, 0), at("2026-08-02", 2, 0))
 	job := h.monthJob("2026-08")
 	if job.State != stateFailed || job.LastErrorCode.String != "needs_attention" {
 		t.Fatalf("job = %+v", job)
+	}
+	// The daily run leaves a month that waits for the owner alone.
+	h.run(at("2026-08-03", 1, 0), at("2026-08-03", 2, 0))
+	if h.fake.count("POST") != 1 || h.monthJob("2026-08").State != stateFailed {
+		t.Fatalf("posts = %d", h.fake.count("POST"))
 	}
 	// The owner excludes it and commits the import, which completes the job.
 	pipeline := imports.New(h.store)
@@ -617,7 +628,7 @@ func TestDailySyncStartsMidMonthAfterUpgrade(t *testing.T) {
 
 	// The monthly version imported September on 1 October, then the upgrade
 	// filled report_to.
-	h.run(at("2026-10-01", 6, 0), at("2026-10-01", 7, 0))
+	h.run(at("2026-10-01", 1, 0), at("2026-10-01", 2, 0))
 	migration, err := fs.ReadFile(migrations.Files, "000019_daily_sync.sql")
 	if err != nil {
 		t.Fatal(err)
@@ -633,7 +644,7 @@ func TestDailySyncStartsMidMonthAfterUpgrade(t *testing.T) {
 	// Deployed on 20 October, the server syncs October through the 19th at
 	// once and then waits for the next morning.
 	h.restart()
-	expectTime(t, h.run(at("2026-10-20", 10, 0), at("2026-10-20", 11, 0)), at("2026-10-21", 6, 0))
+	expectTime(t, h.run(at("2026-10-20", 10, 0), at("2026-10-20", 11, 0)), at("2026-10-21", 1, 0))
 	h.fake.mu.Lock()
 	bodies := slices.Clone(h.fake.bodies)
 	h.fake.mu.Unlock()
@@ -647,7 +658,7 @@ func TestDailySyncStartsMidMonthAfterUpgrade(t *testing.T) {
 		t.Fatalf("september = %+v", job)
 	}
 
-	h.run(at("2026-10-21", 6, 0), at("2026-10-21", 7, 0))
+	h.run(at("2026-10-21", 1, 0), at("2026-10-21", 2, 0))
 	if ids := h.externalIDs(); !slices.Contains(ids, "t212-october-20") || len(ids) != 4 {
 		t.Fatalf("ids = %v", ids)
 	}
@@ -659,8 +670,8 @@ func TestMonthlyReportFailures(t *testing.T) {
 
 	// A failed report stops the job and records one failure notification.
 	h.fake.status = integrations.ReportFailed
-	h.step(at("2026-09-01", 6, 0))
-	h.step(at("2026-09-01", 6, 1))
+	h.step(at("2026-09-01", 1, 0))
+	h.step(at("2026-09-01", 1, 1))
 	job := h.monthJob("2026-08")
 	if job.State != stateFailed || job.LastErrorCode.String != "report_failed" {
 		t.Fatalf("job = %+v", job)
@@ -671,7 +682,7 @@ func TestMonthlyReportFailures(t *testing.T) {
 	}
 	// The failed job stays failed; later steps neither retry nor alert again.
 	for minute := 2; minute < 10; minute++ {
-		h.step(at("2026-09-01", 6, minute))
+		h.step(at("2026-09-01", 1, minute))
 	}
 	if h.fake.count("POST") != 1 || h.count("SELECT count(*) FROM notification_events") != 1 {
 		t.Fatalf("posts = %d", h.fake.count("POST"))
@@ -682,13 +693,13 @@ func TestMonthlyReportFailures(t *testing.T) {
 
 	// A rerun resolves the failure; a canceled report fails again and alerts
 	// again with a new idempotency key.
-	h.now = at("2026-09-01", 7, 0)
+	h.now = at("2026-09-01", 2, 0)
 	if started, err := Rerun(ctx, h.store.Queries, h.account, "2026-08", h.now); err != nil || !started {
 		t.Fatalf("rerun = %v, %v", started, err)
 	}
 	h.fake.status = integrations.ReportCanceled
-	h.step(at("2026-09-01", 7, 0))
-	h.step(at("2026-09-01", 7, 1).Add(time.Second))
+	h.step(at("2026-09-01", 2, 0))
+	h.step(at("2026-09-01", 2, 1).Add(time.Second))
 	job = h.monthJob("2026-08")
 	again, err := h.store.Queries.GetJobFailure(ctx, sql.NullInt64{Int64: job.ID, Valid: true})
 	if job.State != stateFailed || job.LastErrorCode.String != "report_canceled" || err != nil ||
@@ -717,20 +728,60 @@ func TestMonthlyReportFailures(t *testing.T) {
 	}
 }
 
+func TestFailedMonthRetriesAtTheNextDailyRun(t *testing.T) {
+	h := newMonthlyHarness(t, "2026-08")
+	ctx := context.Background()
+	h.fake.status = integrations.ReportFailed
+	h.run(at("2026-09-01", 1, 0), at("2026-09-01", 2, 0))
+	failed := h.monthJob("2026-08")
+	if failed.State != stateFailed {
+		t.Fatalf("job = %+v", failed)
+	}
+
+	// Nothing is retried before the next 01:00.
+	expectTime(t, h.run(at("2026-09-01", 12, 0), at("2026-09-01", 13, 0)), at("2026-09-02", 1, 0))
+	if h.fake.count("POST") != 1 {
+		t.Fatalf("posts = %d", h.fake.count("POST"))
+	}
+
+	// Then the same range is requested again without the owner, and the
+	// import that succeeds resolves the failure.
+	h.fake.setStatus(integrations.ReportFinished)
+	h.run(at("2026-09-02", 1, 0), at("2026-09-02", 2, 0))
+	job := h.monthJob("2026-08")
+	if job.State != stateCompleted || job.ReportTo.String != job.PeriodEndUtc.String {
+		t.Fatalf("job = %+v", job)
+	}
+	// September has its first sync in the same run.
+	if ids := h.externalIDs(); !slices.Equal(ids, []string{"t212-deposit", "t212-first", "t212-last", "t212-september"}) {
+		t.Fatalf("ids = %v", ids)
+	}
+	h.fake.mu.Lock()
+	first, second := h.fake.bodies[0], h.fake.bodies[1]
+	h.fake.mu.Unlock()
+	if len(h.fake.bodies) != 3 || first["timeFrom"] != second["timeFrom"] || first["timeTo"] != second["timeTo"] {
+		t.Fatalf("requests = %v", h.fake.bodies)
+	}
+	failure, err := h.store.Queries.GetJobFailure(ctx, sql.NullInt64{Int64: job.ID, Valid: true})
+	if err != nil || !failure.DismissedAt.Valid {
+		t.Fatalf("failure = %+v, %v", failure, err)
+	}
+}
+
 func TestMonthlyTransientFailuresRetryWithBackoff(t *testing.T) {
 	h := newMonthlyHarness(t, "2026-08")
 	h.fake.postStatus = http.StatusTooManyRequests
-	expectTime(t, h.step(at("2026-09-01", 6, 0)), at("2026-09-01", 6, 0))
+	expectTime(t, h.step(at("2026-09-01", 1, 0)), at("2026-09-01", 1, 0))
 	job := h.monthJob("2026-08")
 	if job.State != statePending || job.RetryCount != 1 || job.LastErrorCode.String != "rate_limited" ||
-		job.NextAttemptAt != stamp(at("2026-09-01", 6, 5)).String {
+		job.NextAttemptAt != stamp(at("2026-09-01", 1, 5)).String {
 		t.Fatalf("job = %+v", job)
 	}
 	if h.count("SELECT count(*) FROM notification_events") != 0 {
 		t.Fatal("a transient failure alerted")
 	}
 	// The retry succeeds and resets the count.
-	h.step(at("2026-09-01", 6, 5))
+	h.step(at("2026-09-01", 1, 5))
 	if job := h.monthJob("2026-08"); job.State != statePolling || job.RetryCount != 0 || job.LastErrorCode.Valid {
 		t.Fatalf("job = %+v", job)
 	}
@@ -738,7 +789,7 @@ func TestMonthlyTransientFailuresRetryWithBackoff(t *testing.T) {
 	// A permanent failure stops at once with its cause.
 	h = newMonthlyHarness(t, "2026-08")
 	h.fake.postStatus = http.StatusForbidden
-	h.step(at("2026-09-01", 6, 0))
+	h.step(at("2026-09-01", 1, 0))
 	if job := h.monthJob("2026-08"); job.State != stateFailed || job.LastErrorCode.String != "forbidden" ||
 		!strings.Contains(job.LastErrorDetail.String, "History reports permission") {
 		t.Fatalf("job = %+v", job)
@@ -749,9 +800,9 @@ func TestMonthlyTransientFailuresRetryWithBackoff(t *testing.T) {
 
 	// Transient failures stop after the retry limit.
 	h = newMonthlyHarness(t, "2026-08")
-	h.step(at("2026-09-01", 6, 0))
+	h.step(at("2026-09-01", 1, 0))
 	h.fake.replace(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusRequestTimeout) })
-	now := at("2026-09-01", 6, 1).Add(time.Second)
+	now := at("2026-09-01", 1, 1).Add(time.Second)
 	for range 4 * maxRetries {
 		if now = h.step(now); h.monthJob("2026-08").State == stateFailed {
 			break
@@ -767,14 +818,14 @@ func TestMonthlyRequestResumesAfterLostResponse(t *testing.T) {
 	h := newMonthlyHarness(t, "2026-08")
 	// The report is created but the response is lost.
 	h.fake.dropPost = true
-	h.step(at("2026-09-01", 6, 0))
+	h.step(at("2026-09-01", 1, 0))
 	job := h.monthJob("2026-08")
 	if job.State != stateRequesting || job.ReportID.Valid || job.LastErrorCode.String != "unreachable" {
 		t.Fatalf("job = %+v", job)
 	}
 	// After a restart the job finds the report instead of requesting another.
 	h.restart()
-	h.step(at("2026-09-01", 6, 5))
+	h.step(at("2026-09-01", 1, 5))
 	job = h.monthJob("2026-08")
 	if job.State != statePolling || job.ReportID.String != "101" || h.fake.count("POST") != 1 {
 		t.Fatalf("job = %+v, posts = %d", job, h.fake.count("POST"))
@@ -786,12 +837,12 @@ func TestMonthlyRequestResumesAfterLostResponse(t *testing.T) {
 		connection, _, _ := w.(http.Hijacker).Hijack()
 		connection.Close()
 	})
-	h.step(at("2026-09-01", 6, 0))
+	h.step(at("2026-09-01", 1, 0))
 	if job := h.monthJob("2026-08"); job.State != stateRequesting {
 		t.Fatalf("job = %+v", job)
 	}
 	h.fake.replace(nil)
-	h.step(at("2026-09-01", 6, 5))
+	h.step(at("2026-09-01", 1, 5))
 	if job := h.monthJob("2026-08"); job.State != statePolling || job.ReportID.String != "101" || h.fake.count("POST") != 1 {
 		t.Fatalf("job = %+v", job)
 	}
@@ -803,12 +854,12 @@ func TestMonthlyCatchUpRespectsRateLimits(t *testing.T) {
 	h.fake.csv = "Action,Time (UTC),Notes,ID,Total,Currency (Total),Merchant name,Merchant category\n"
 	// June's request is rejected; July may not be requested within 30 seconds.
 	h.fake.postStatus = http.StatusBadRequest
-	h.step(at("2026-09-01", 6, 0))
+	h.step(at("2026-09-01", 1, 0))
 	if job := h.monthJob("2026-06"); job.State != stateFailed || job.LastErrorCode.String != "rejected" {
 		t.Fatalf("june = %+v", job)
 	}
-	next := h.settle(at("2026-09-01", 6, 0))
-	expectTime(t, next, at("2026-09-01", 6, 0).Add(31*time.Second))
+	next := h.settle(at("2026-09-01", 1, 0))
+	expectTime(t, next, at("2026-09-01", 1, 0).Add(31*time.Second))
 	if h.fake.count("POST") != 1 {
 		t.Fatalf("posts = %d", h.fake.count("POST"))
 	}

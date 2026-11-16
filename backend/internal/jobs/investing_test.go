@@ -125,10 +125,12 @@ func TestInvestingWaitsForKey(t *testing.T) {
 	}
 }
 
-func TestInvestingSnapshotsHourlyAndNamesPies(t *testing.T) {
+func TestInvestingSnapshotsDailyAndNamesPies(t *testing.T) {
 	h := newInvestingHarness(t, true)
 	start := h.now
-	if next := h.step(start); !next.Equal(start.Add(time.Hour)) {
+	// The next snapshot is at 02:00 Bratislava time the next day.
+	tomorrow := time.Date(2026, 9, 2, 0, 0, 0, 0, time.UTC)
+	if next := h.step(start); !next.Equal(tomorrow) {
 		t.Fatalf("next %v", next)
 	}
 	snapshots := h.snapshots()
@@ -144,22 +146,24 @@ func TestInvestingSnapshotsHourlyAndNamesPies(t *testing.T) {
 	if h.pauses != 1 {
 		t.Fatalf("paused %d times", h.pauses)
 	}
-	// A restart half an hour later keeps the schedule.
-	if next := h.step(start.Add(30 * time.Minute)); !next.Equal(start.Add(time.Hour)) {
+	// A restart later that day keeps the schedule.
+	if next := h.step(start.Add(5 * time.Hour)); !next.Equal(tomorrow) || len(h.snapshots()) != 1 {
 		t.Fatalf("next after restart %v", next)
 	}
 	// Names are refreshed only once a day.
 	h.fake.value, h.fake.pies = 1100, 3
 	h.fake.names["/api/v0/equity/pies/3"] = "New"
-	h.step(start.Add(time.Hour))
+	if next := h.step(tomorrow); !next.Equal(tomorrow.Add(24 * time.Hour)) {
+		t.Fatalf("next after the second snapshot %v", next)
+	}
 	if h.fake.calls["/api/v0/equity/pies/1"] != 1 || h.fake.calls["/api/v0/equity/pies/3"] != 1 {
 		t.Fatalf("calls %v", h.fake.calls)
 	}
-	h.step(start.Add(25 * time.Hour))
+	h.step(tomorrow.Add(24 * time.Hour))
 	if h.fake.calls["/api/v0/equity/pies/1"] != 2 || len(h.snapshots()) != 3 {
 		t.Fatalf("calls %v", h.fake.calls)
 	}
-	if state := h.state(); state.LastError.Valid || state.LastAttemptAt.String != "2026-09-02T11:00:00Z" {
+	if state := h.state(); state.LastError.Valid || state.LastAttemptAt.String != "2026-09-03T00:00:00Z" {
 		t.Fatalf("state %+v", state)
 	}
 }
@@ -167,7 +171,7 @@ func TestInvestingSnapshotsHourlyAndNamesPies(t *testing.T) {
 func TestInvestingKeepsAccountWhenPiesFail(t *testing.T) {
 	h := newInvestingHarness(t, true)
 	h.fake.piesState = http.StatusForbidden
-	if next := h.step(h.now); !next.Equal(h.now.Add(time.Hour)) {
+	if next := h.step(h.now); !next.Equal(time.Date(2026, 9, 2, 0, 0, 0, 0, time.UTC)) {
 		t.Fatalf("next %v", next)
 	}
 	if len(h.snapshots()) != 1 {
@@ -198,7 +202,7 @@ func TestInvestingRetriesTransientFailures(t *testing.T) {
 	server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	})
-	if next := h.step(start.Add(investingRetry)); !next.Equal(start.Add(investingRetry + time.Hour)) {
+	if next := h.step(start.Add(investingRetry)); !next.Equal(time.Date(2026, 9, 2, 0, 0, 0, 0, time.UTC)) {
 		t.Fatalf("next after a rejected key %v", next)
 	}
 }

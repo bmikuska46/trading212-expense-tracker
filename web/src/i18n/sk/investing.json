@@ -114,7 +114,7 @@
     "deleteGroup": "Odstrániť skupinu {name}",
     "pies": "Koláče v skupine {name}"
   },
-  "footnote": "Sumy sú v mene {currency}, ako ich hlási Trading 212. {count, plural, one {Za {range} je # snímka} few {Za {range} sú # snímky} other {Za {range} je # snímok}}, najnovšia je z {latest}. Snímka sa robí každú hodinu.",
+  "footnote": "Sumy sú v mene {currency}, ako ich hlási Trading 212. {count, plural, one {Za {range} je # snímka} few {Za {range} sú # snímky} other {Za {range} je # snímok}}, najnovšia je z {latest}. Snímka sa robí každý deň o 02:00.",
   "tryAgain": "Skúsiť znova",
   "failed": {
     "title": "Posledná snímka sa nedokončila",
@@ -127,9 +127,9 @@
   "empty": {
     "none": "Za {range} nie sú žiadne snímky",
     "connect": "Pripojte Trading 212",
-    "connectBody": "Uložte API kľúč Trading 212 s oprávneniami na čítanie Account data a Pies. Portfólio sa potom zaznamená každú hodinu.",
-    "hourly": "Snímky sa robia každú hodinu. Staršie uvidíte, keď vyberiete dlhší rozsah.",
-    "first": "Prvá snímka sa urobí do minúty od uloženia kľúča a potom každú hodinu.",
+    "connectBody": "Uložte API kľúč Trading 212 s oprávneniami na čítanie Account data a Pies. Portfólio sa potom zaznamenáva každý deň o 02:00.",
+    "daily": "Snímka sa robí každý deň o 02:00. Staršie uvidíte, keď vyberiete dlhší rozsah.",
+    "first": "Prvá snímka sa urobí do minúty od uloženia kľúča a potom každý deň o 02:00.",
     "openSettings": "Otvoriť nastavenia",
     "showAll": "Zobraziť celé obdobie"
   },

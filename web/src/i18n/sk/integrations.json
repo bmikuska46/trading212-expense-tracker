@@ -28,7 +28,7 @@
   "apiSecret": "Tajný API kľúč",
   "enterApiSecret": "Zadajte tajný API kľúč.",
   "trading212": {
-    "description": "Importuje platby kartou z denných výpisov histórie, každú hodinu zaznamenáva vaše portfólio na stránke Investície a importuje dividendy, úroky a cashback. V Trading 212 vytvorte API kľúč s oprávneniami na čítanie Account data, History a Pies. Načítajú sa len časti, ktoré vyberiete nižšie.",
+    "description": "Importuje platby kartou z denných výpisov histórie, každý deň zaznamenáva vaše portfólio na stránke Investície a raz mesačne importuje dividendy, úroky a cashback. V Trading 212 vytvorte API kľúč s oprávneniami na čítanie Account data, History a Pies. Načítajú sa len časti, ktoré vyberiete nižšie.",
     "period": "Automatické importy začínajú obdobím {period}.",
     "environment": "Prostredie",
     "live": "Reálny účet",
@@ -40,15 +40,15 @@
     "sync": "Čo synchronizovať",
     "syncParts": {
       "portfolio": "Prehľad účtu",
-      "portfolioHint": "Hodinový záznam hodnoty portfólia, hotovosti a výsledkov.",
+      "portfolioHint": "Denný záznam hodnoty portfólia, hotovosti a výsledkov o 02:00.",
       "pies": "Pies",
       "piesHint": "Hodnota, výsledok a dividendy každého pie. Vyžaduje prehľad účtu.",
       "dividends": "Dividendy",
-      "dividendsHint": "Výplaty dividend z histórie dividend.",
+      "dividendsHint": "Výplaty dividend z histórie dividend, načítané 1. dňa v mesiaci.",
       "interest": "Úroky",
-      "interestHint": "Úroky z voľnej hotovosti a z požičiavania akcií.",
+      "interestHint": "Úroky z voľnej hotovosti a z požičiavania akcií, načítané 1. dňa v mesiaci.",
       "cashback": "Cashback",
-      "cashbackHint": "Cashback z platieb kartou, načítaný z denného výpisu."
+      "cashbackHint": "Cashback z platieb kartou, načítaný z výpisu 1. dňa v mesiaci."
     }
   },
   "typesafe": {
